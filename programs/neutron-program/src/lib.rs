@@ -15,7 +15,11 @@ declare_id!("Au4AWwhGvJFpxgJh3Qe83V8Z4emdd3CoE7EVoSiR5P5L");
 pub mod neutron_program {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        min_stake_lamports: u64,
+        max_observers: u16,
+    ) -> Result<()> {
+        initialize::init(ctx, min_stake_lamports, max_observers)
     }
 }
