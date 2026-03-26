@@ -22,4 +22,8 @@ pub mod neutron_program {
     ) -> Result<()> {
         initialize::init(ctx, min_stake_lamports, max_observers)
     }
+
+    pub fn register_observer(ctx: Context<RegisterObserver>, region: Region) -> Result<()> {
+        register_observer::register(ctx, region)
+    }
 }
