@@ -8,6 +8,7 @@ use anchor_lang::prelude::*;
 pub struct Initialize<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
+
     #[account(
         init,
         payer = authority,
@@ -15,7 +16,8 @@ pub struct Initialize<'info> {
         seeds = [REGISTRY_SEED],
         bump
     )]
-    pub registry: Account<'info, RegistryAccount>,
+    pub registry: Account<'info, RegistryAccount>, 
+
     #[account(
         init,
         payer = authority,
@@ -27,7 +29,9 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Initializes registry and network health accounts
 pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u16) -> Result<()> {
+    // Ensure protocol parameters are valid
     require!(min_stake_lamports > 0, NeutronErrors::ValueCannotBeZero);
     require!(max_observers > 0, NeutronErrors::ValueCannotBeZero);
 
@@ -41,6 +45,7 @@ pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u1
 
     let network_health = &mut ctx.accounts.network_health;
 
+    // Initialize with worst possible value so first update always lowers it
     network_health.min_health_ever = u8::MAX;
     network_health.region_scores = [
         RegionScore {
