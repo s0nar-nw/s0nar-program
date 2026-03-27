@@ -2,6 +2,7 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 use anchor_lang::prelude::*;
 
@@ -25,5 +26,23 @@ pub mod neutron_program {
 
     pub fn register_observer(ctx: Context<RegisterObserver>, region: Region) -> Result<()> {
         register_observer::register(ctx, region)
+    }
+
+    pub fn submit_attestation(
+        ctx: Context<SubmitAttestation>,
+        tpu_reachable: u16,
+        tpu_probed: u16,
+        avg_rtt_us: u32,
+        p95_rtt_us: u32,
+        slot_latency_ms: u32,
+    ) -> Result<()> {
+        submit_attestation::submit(
+            ctx,
+            tpu_reachable,
+            tpu_probed,
+            avg_rtt_us,
+            p95_rtt_us,
+            slot_latency_ms,
+        )
     }
 }
