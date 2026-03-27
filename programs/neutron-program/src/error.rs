@@ -28,4 +28,7 @@ pub enum NeutronErrors {
 
     #[msg("Stale attestation")]
     StaleAttestation,
+
+    #[msg("No active observers")]
+    NoActiveObservers,
 }

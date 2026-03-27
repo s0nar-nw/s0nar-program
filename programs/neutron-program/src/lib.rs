@@ -45,4 +45,8 @@ pub mod neutron_program {
             slot_latency_ms,
         )
     }
+
+    pub fn crank_aggregation<'a>(ctx: Context<'_, '_, '_, 'a, CrankAggregation<'a>>) -> Result<()> {
+        crank_aggregation::crank(ctx)
+    }
 }
