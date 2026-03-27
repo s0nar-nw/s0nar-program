@@ -13,4 +13,19 @@ pub enum NeutronErrors {
 
     #[msg("Insufficient Lamports")]
     InsufficientLamports,
+
+    #[msg("Unauthorized Observer")]
+    UnauthorizedObserver,
+
+    #[msg("Observer is not active")]
+    ObserverNotActive,
+
+    #[msg("Zero validators probed")]
+    ZeroValidatorsProbed,
+
+    #[msg("Invalid reachability count")]
+    InvalidReachabilityCount,
+
+    #[msg("Stale attestation")]
+    StaleAttestation,
 }
