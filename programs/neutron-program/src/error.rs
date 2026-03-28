@@ -31,4 +31,10 @@ pub enum NeutronErrors {
 
     #[msg("No active observers")]
     NoActiveObservers,
+
+    #[msg("Observer already inactive")]
+    ObserverAlreadyInActive,
+
+    #[msg("Unauthorized caller")]
+    UnAuthorizedCaller,
 }
