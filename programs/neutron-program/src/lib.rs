@@ -49,4 +49,8 @@ pub mod neutron_program {
     pub fn crank_aggregation<'a>(ctx: Context<'_, '_, '_, 'a, CrankAggregation<'a>>) -> Result<()> {
         crank_aggregation::crank(ctx)
     }
+
+    pub fn deregister_observer(ctx: Context<DeregisterObserver>) -> Result<()> {
+        deregister_observer::deregister(ctx)
+    }
 }
