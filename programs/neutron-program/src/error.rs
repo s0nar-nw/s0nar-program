@@ -37,4 +37,7 @@ pub enum NeutronErrors {
 
     #[msg("Unauthorized caller")]
     UnAuthorizedCaller,
+
+    #[msg("Insufficient balance in PDA for stake refund")]
+    InsufficientBalanceForRefund,
 }

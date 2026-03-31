@@ -1,6 +1,5 @@
 use crate::{error::NeutronErrors, ObserverAccount, RegistryAccount, OBSERVER_SEED, REGISTRY_SEED};
 use anchor_lang::prelude::*;
-use anchor_lang::system_program::{transfer, Transfer};
 
 #[derive(Accounts)]
 pub struct DeregisterObserver<'info> {
@@ -54,26 +53,27 @@ pub fn deregister(ctx: Context<DeregisterObserver>) -> Result<()> {
     );
 
     let stake_lamports = ctx.accounts.observer_account.stake_lamports;
-    // Transfer stake_lamports from the observer_account PDA to observer wallet
     if stake_lamports > 0 {
-        let key_binding = ctx.accounts.observer_wallet.key();
-        let seeds = &[
-            OBSERVER_SEED,
-            key_binding.as_ref(),
-            &[ctx.accounts.observer_account.bump],
-        ];
+        let pda_info = &mut ctx.accounts.observer_account.to_account_info();
+        let wallet_info = &mut ctx.accounts.observer_wallet.to_account_info();
 
-        let signer_seeds = &[&seeds[..]];
+        let current_pda_balance = pda_info.lamports();
 
-        let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.system_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.observer_account.to_account_info(),
-                to: ctx.accounts.observer_wallet.to_account_info(),
-            },
-            signer_seeds,
+        // Get rent-exempt minimum for this account size
+        let rent = Rent::get()?;
+        let rent_exempt_min = rent.minimum_balance(pda_info.data_len());
+
+        // Safety check: never drain below rent-exempt
+        require!(
+            current_pda_balance >= rent_exempt_min + stake_lamports,
+            NeutronErrors::InsufficientBalanceForRefund
         );
-        transfer(cpi_ctx, stake_lamports)?;
+
+        // Debit from PDA (program can do this directly)
+        **pda_info.try_borrow_mut_lamports()? -= stake_lamports;
+
+        // Credit to observer wallet
+        **wallet_info.try_borrow_mut_lamports()? += stake_lamports;
     }
 
     // Updating observer to be inactive
