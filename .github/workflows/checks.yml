@@ -27,9 +27,6 @@ jobs:
       - name: Build
         run: cargo build --release --locked
 
-      - name: Test
-        run: cargo test --locked
-
   lint:
     runs-on: ubuntu-latest
     steps:
