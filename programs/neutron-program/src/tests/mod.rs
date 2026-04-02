@@ -1164,7 +1164,6 @@ mod tests {
         );
     }
 
-
     // tests region score updates
     #[test]
     fn test_crank_updates_region_scores_correctly() {
