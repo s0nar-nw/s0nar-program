@@ -54,4 +54,13 @@ pub mod neutron_program {
     pub fn deregister_observer(ctx: Context<DeregisterObserver>) -> Result<()> {
         deregister_observer::deregister(ctx)
     }
+
+    pub fn update_config(
+        ctx: Context<UpdateConfig>,
+        min_stake_lamports: Option<u64>,
+        max_observers: Option<u16>,
+        paused: Option<bool>,
+    ) -> Result<()> {
+        update_config::update(ctx, min_stake_lamports, max_observers, paused)
+    }
 }
