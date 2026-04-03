@@ -176,6 +176,29 @@ mod tests {
         send_tx(svm, &[ix], &[caller])
     }
 
+    fn update_config(
+        svm: &mut LiteSVM,
+        auth: &Keypair,
+        min_stake_lamports: Option<u64>,
+        max_observers: Option<u16>,
+        paused: Option<bool>,
+    ) -> Result<(), TransactionError> {
+        let ix = Instruction {
+            program_id: program_id(),
+            accounts: vec![
+                AccountMeta::new(auth.pubkey(), true),
+                AccountMeta::new(get_registry_pda(), false),
+            ],
+            data: crate::instruction::UpdateConfig {
+                min_stake_lamports,
+                max_observers,
+                paused,
+            }
+            .data(),
+        };
+        send_tx(svm, &[ix], &[auth])
+    }
+
     fn advance_slot(svm: &mut LiteSVM, slots: u64) {
         let mut clock: SolanaClock = svm.get_sysvar::<SolanaClock>();
         clock.slot += slots;
@@ -1094,7 +1117,6 @@ mod tests {
     // test emergency stop mechanism
     #[test]
     fn test_paused_registryblocks() {
-        use anchor_lang::AccountSerialize;
         let (mut svm, auth) = setup();
         init_protocol(&mut svm, &auth, 1, 5);
 
@@ -1103,15 +1125,7 @@ mod tests {
         register_observer(&mut svm, &obs, crate::Region::Asia).unwrap();
 
         // Pause the registry
-        let registry_pda = get_registry_pda();
-        let mut account = svm.get_account(&registry_pda).unwrap();
-        let mut reg =
-            crate::state::RegistryAccount::try_deserialize(&mut account.data.as_ref()).unwrap();
-        reg.paused = true;
-        let mut new_data = Vec::new();
-        reg.try_serialize(&mut new_data).unwrap();
-        account.data = new_data;
-        svm.set_account(registry_pda, account).unwrap();
+        update_config(&mut svm, &auth, None, None, Some(true)).unwrap();
 
         // Register observer must fail
         let obs2 = Keypair::new();
@@ -1260,5 +1274,67 @@ mod tests {
         assert!(h2.min_health_ever <= score2, "min health track lowest");
         assert!(h2.max_health_ever >= score1, "max health track highest");
         assert!(h2.max_health_ever >= h2.min_health_ever);
+    }
+
+    // test update config ix
+    #[test]
+    fn test_update_config() {
+        let (mut svm, auth) = setup();
+        init_protocol(&mut svm, &auth, 1, 5);
+
+        let obs = Keypair::new();
+        svm.airdrop(&obs.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        register_observer(&mut svm, &obs, crate::Region::Asia).unwrap();
+
+        update_config(&mut svm, &auth, Some(3), None, None).unwrap();
+
+        let registry = crate::state::RegistryAccount::try_deserialize(
+            &mut svm.get_account(&get_registry_pda()).unwrap().data.as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            registry.min_stake_lamports, 3,
+            "Min stake should be updated"
+        );
+
+        update_config(&mut svm, &auth, None, Some(10), None).unwrap();
+
+        let registry = crate::state::RegistryAccount::try_deserialize(
+            &mut svm.get_account(&get_registry_pda()).unwrap().data.as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            registry.max_observers, 10,
+            "Max observers should be updated"
+        );
+        let registry = crate::state::RegistryAccount::try_deserialize(
+            &mut svm.get_account(&get_registry_pda()).unwrap().data.as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            registry.max_observers, 10,
+            "Max observers should be updated"
+        );
+
+        update_config(&mut svm, &auth, None, None, Some(true)).unwrap();
+
+        let registry = crate::state::RegistryAccount::try_deserialize(
+            &mut svm.get_account(&get_registry_pda()).unwrap().data.as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(registry.paused, true, "Paused should be updated");
+
+        update_config(&mut svm, &auth, None, None, Some(false)).unwrap();
+
+        let registry = crate::state::RegistryAccount::try_deserialize(
+            &mut svm.get_account(&get_registry_pda()).unwrap().data.as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(registry.paused, false, "Paused should be unpaused");
     }
 }
