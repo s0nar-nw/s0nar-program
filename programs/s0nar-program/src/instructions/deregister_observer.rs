@@ -30,7 +30,7 @@ pub struct DeregisterObserver<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// De-Registers an existing observer node in the Neutron network.
+/// De-Registers an existing observer node in the s0nar network.
 ///
 /// This instruction:
 /// - Guards against unauthorized caller and already inactive observer

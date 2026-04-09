@@ -1768,27 +1768,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "neutron-program"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "litesvm",
- "solana-account",
- "solana-address 2.5.0",
- "solana-clock 3.0.1",
- "solana-instruction 3.1.0",
- "solana-keypair",
- "solana-message",
- "solana-native-token",
- "solana-pubkey 3.0.0",
- "solana-sdk",
- "solana-sdk-ids 3.1.0",
- "solana-signer",
- "solana-transaction",
- "solana-transaction-error",
-]
-
-[[package]]
 name = "num"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2239,6 +2218,27 @@ name = "rustversion"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
+
+[[package]]
+name = "s0nar-program"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "litesvm",
+ "solana-account",
+ "solana-address 2.5.0",
+ "solana-clock 3.0.1",
+ "solana-instruction 3.1.0",
+ "solana-keypair",
+ "solana-message",
+ "solana-native-token",
+ "solana-pubkey 3.0.0",
+ "solana-sdk",
+ "solana-sdk-ids 3.1.0",
+ "solana-signer",
+ "solana-transaction",
+ "solana-transaction-error",
+]
 
 [[package]]
 name = "scopeguard"

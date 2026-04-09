@@ -30,7 +30,7 @@ mod tests {
         svm.airdrop(&payer.pubkey(), 100 * LAMPORTS_PER_SOL)
             .unwrap();
 
-        let so_path = PathBuf::from("../../target/sbpf-solana-solana/release/neutron_program.so");
+        let so_path = PathBuf::from("../../target/sbpf-solana-solana/release/s0nar_program.so");
         msg!("The path is!! {:?}", so_path);
 
         let program_data = std::fs::read(so_path).expect("Failed to read program SO file");

@@ -1,6 +1,6 @@
-# neutron-program
+# s0nar-program
 
-Anchor program for the Neutron decentralized network telemetry oracle on Solana.
+Anchor program for the s0nar decentralized network telemetry oracle on Solana.
 
 Lightweight observer nodes measure real TPU reachability and slot propagation timing from multiple geographic vantage points and submit signed attestations on-chain. The program aggregates these into a single stake-weighted health score that any Solana program can read.
 
@@ -25,7 +25,7 @@ A region is considered stale if no attestation has been received in the last 150
 ## Program Structure
 
 ```
-programs/neutron-program/src/
+programs/s0nar-program/src/
 ├── lib.rs                      # entrypoint + instruction dispatch
 ├── error.rs                    # custom error codes
 ├── utils.rs                    # score computation helpers (shared across instructions)
