@@ -14,7 +14,7 @@ pub use state::*;
 declare_id!("Au4AWwhGvJFpxgJh3Qe83V8Z4emdd3CoE7EVoSiR5P5L");
 
 #[program]
-pub mod neutron_program {
+pub mod s0nar_program {
     use super::*;
 
     pub fn initialize(

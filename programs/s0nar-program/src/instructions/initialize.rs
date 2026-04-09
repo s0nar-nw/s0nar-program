@@ -32,7 +32,7 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Initializes the Neutron registry and network health accounts.
+/// Initializes the s0nar registry and network health accounts.
 ///
 /// This instruction:
 /// - Creates RegistryAccount

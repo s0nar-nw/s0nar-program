@@ -31,7 +31,7 @@ pub struct RegisterObserver<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Registers a new observer node in the Neutron network.
+/// Registers a new observer node in the s0nar network.
 ///
 /// This instruction:
 /// - Guards against a paused registry and a full observer set

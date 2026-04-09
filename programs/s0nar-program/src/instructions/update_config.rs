@@ -1,4 +1,4 @@
-use crate::{error::NeutronErrors, RegistryAccount, REGISTRY_SEED};
+use crate::{error::CustomErrors, RegistryAccount, REGISTRY_SEED};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -11,12 +11,12 @@ pub struct UpdateConfig<'info> {
         mut,
         seeds = [REGISTRY_SEED],
         bump = registry.bump,
-        has_one = authority @ NeutronErrors::UnAuthorizedCaller
+        has_one = authority @ CustomErrors::UnAuthorizedCaller
     )]
     pub registry: Account<'info, RegistryAccount>,
 }
 
-/// Updates the Neutron registry
+/// Updates the sonar registry
 ///
 /// This instruction:
 /// - Optionally update min_stake_lamports field in registry
@@ -31,12 +31,12 @@ pub fn update(
     let registry = &mut ctx.accounts.registry;
 
     if let Some(min_stake) = min_stake_lamports {
-        require!(min_stake > 0, NeutronErrors::ValueCannotBeZero);
+        require!(min_stake > 0, CustomErrors::ValueCannotBeZero);
         registry.min_stake_lamports = min_stake;
     }
 
     if let Some(max_obs) = max_observers {
-        require!(max_obs > 0, NeutronErrors::ValueCannotBeZero);
+        require!(max_obs > 0, CustomErrors::ValueCannotBeZero);
         registry.max_observers = max_obs;
     }
 
