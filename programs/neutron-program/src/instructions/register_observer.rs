@@ -1,5 +1,5 @@
 use crate::{
-    error::NeutronErrors, Attestation, ObserverAccount, Region, RegistryAccount, OBSERVER_SEED,
+    error::CustomErrors, Attestation, ObserverAccount, Region, RegistryAccount, OBSERVER_SEED,
     REGISTRY_SEED,
 };
 use anchor_lang::prelude::*;
@@ -40,10 +40,10 @@ pub struct RegisterObserver<'info> {
 /// - Increments `registry.observer_count` and `registry.active_count`
 pub fn register(ctx: Context<RegisterObserver>, region: Region) -> Result<()> {
     // Ensure registry is active and observer limit is not exceeded
-    require!(!ctx.accounts.registry.paused, NeutronErrors::RegistryPaused);
+    require!(!ctx.accounts.registry.paused, CustomErrors::RegistryPaused);
     require!(
         ctx.accounts.registry.active_count < ctx.accounts.registry.max_observers,
-        NeutronErrors::MaxObserversReached
+        CustomErrors::MaxObserversReached
     );
 
     let min_stake_lamports = ctx.accounts.registry.min_stake_lamports;
@@ -51,7 +51,7 @@ pub fn register(ctx: Context<RegisterObserver>, region: Region) -> Result<()> {
     // Ensure observer has enough lamports
     require!(
         ctx.accounts.observer.lamports() >= min_stake_lamports,
-        NeutronErrors::InsufficientLamports
+        CustomErrors::InsufficientLamports
     );
 
     // Transfer min_stake_lamports into the observer_account PDA as escrow

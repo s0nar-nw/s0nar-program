@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    error::NeutronErrors,
+    error::CustomErrors,
     utils::{
         compute_avg_reach_latency, compute_health_score, count_active_regions,
         recompute_global_score,
@@ -26,7 +26,7 @@ pub struct CrankAggregation<'info> {
     #[account(
         seeds = [REGISTRY_SEED],
         bump = registry_account.bump,
-        constraint = !registry_account.paused @ NeutronErrors::RegistryPaused,
+        constraint = !registry_account.paused @ CustomErrors::RegistryPaused,
     )]
     pub registry_account: Account<'info, RegistryAccount>,
 
@@ -111,7 +111,7 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
     let global_score = recompute_global_score(network_health, current_slot);
     let active_count = count_active_regions(network_health, current_slot);
 
-    require!(active_count > 0, NeutronErrors::NoActiveObservers);
+    require!(active_count > 0, CustomErrors::NoActiveObservers);
 
     let (avg_reach, avg_latency) = compute_avg_reach_latency(network_health, current_slot);
 

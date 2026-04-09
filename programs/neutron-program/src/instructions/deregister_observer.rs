@@ -1,4 +1,4 @@
-use crate::{error::NeutronErrors, ObserverAccount, RegistryAccount, OBSERVER_SEED, REGISTRY_SEED};
+use crate::{error::CustomErrors, ObserverAccount, RegistryAccount, OBSERVER_SEED, REGISTRY_SEED};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -43,13 +43,13 @@ pub fn deregister(ctx: Context<DeregisterObserver>) -> Result<()> {
 
     require!(
         is_observer || is_authority,
-        NeutronErrors::UnAuthorizedCaller
+        CustomErrors::UnAuthorizedCaller
     );
 
     // Ensure observer_account is active
     require!(
         ctx.accounts.observer_account.is_active,
-        NeutronErrors::ObserverAlreadyInActive
+        CustomErrors::ObserverAlreadyInActive
     );
 
     let stake_lamports = ctx.accounts.observer_account.stake_lamports;
@@ -66,7 +66,7 @@ pub fn deregister(ctx: Context<DeregisterObserver>) -> Result<()> {
         // Safety check: never drain below rent-exempt
         require!(
             current_pda_balance >= rent_exempt_min + stake_lamports,
-            NeutronErrors::InsufficientBalanceForRefund
+            CustomErrors::InsufficientBalanceForRefund
         );
 
         // Debit from PDA (program can do this directly)

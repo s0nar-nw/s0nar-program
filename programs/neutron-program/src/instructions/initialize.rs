@@ -1,5 +1,5 @@
 use crate::{
-    error::NeutronErrors, NetworkHealthAccount, Region, RegionScore, RegistryAccount,
+    error::CustomErrors, NetworkHealthAccount, Region, RegionScore, RegistryAccount,
     NETWORK_HEALTH_SEED, REGISTRY_SEED,
 };
 use anchor_lang::prelude::*;
@@ -40,8 +40,8 @@ pub struct Initialize<'info> {
 /// - Sets initial config parameters
 pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u16) -> Result<()> {
     // Ensure protocol parameters are valid
-    require!(min_stake_lamports > 0, NeutronErrors::ValueCannotBeZero);
-    require!(max_observers > 0, NeutronErrors::ValueCannotBeZero);
+    require!(min_stake_lamports > 0, CustomErrors::ValueCannotBeZero);
+    require!(max_observers > 0, CustomErrors::ValueCannotBeZero);
 
     let registry = &mut ctx.accounts.registry;
 

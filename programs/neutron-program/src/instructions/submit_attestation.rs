@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    error::NeutronErrors,
+    error::CustomErrors,
     utils::{
         compute_avg_reach_latency, compute_health_score, count_active_regions,
         recompute_global_score,
@@ -21,8 +21,8 @@ pub struct SubmitAttestation<'info> {
         mut,
         seeds = [OBSERVER_SEED, authority.key().as_ref()],
         bump = observer_account.bump,
-        has_one = authority @ NeutronErrors::UnauthorizedObserver,
-        constraint = observer_account.is_active @ NeutronErrors::ObserverNotActive,
+        has_one = authority @ CustomErrors::UnauthorizedObserver,
+        constraint = observer_account.is_active @ CustomErrors::ObserverNotActive,
     )]
     pub observer_account: Account<'info, ObserverAccount>,
 
@@ -38,7 +38,7 @@ pub struct SubmitAttestation<'info> {
     #[account(
         seeds = [REGISTRY_SEED],
         bump = registry.bump,
-        constraint = !registry.paused @ NeutronErrors::RegistryPaused,
+        constraint = !registry.paused @ CustomErrors::RegistryPaused,
     )]
     pub registry: Account<'info, RegistryAccount>,
 
@@ -57,14 +57,14 @@ pub fn submit(
 ) -> Result<()> {
     let clock = &ctx.accounts.clock;
 
-    require!(tpu_probed > 0, NeutronErrors::ZeroValidatorsProbed);
+    require!(tpu_probed > 0, CustomErrors::ZeroValidatorsProbed);
     require!(
         tpu_reachable <= tpu_probed,
-        NeutronErrors::InvalidReachabilityCount
+        CustomErrors::InvalidReachabilityCount
     );
     require!(
         clock.slot > ctx.accounts.observer_account.last_attestation_slot,
-        NeutronErrors::StaleAttestation
+        CustomErrors::StaleAttestation
     );
 
     // Build the attestation
