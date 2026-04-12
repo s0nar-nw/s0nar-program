@@ -1,13 +1,31 @@
-# s0nar-program
+<p align="center">
+  <img src="./s0nar.svg" alt="s0nar logo" width="400" />
+</p>
 
+<h1 align="center">s0nar-program</h1>
+
+<p align="center">
 Anchor program for the s0nar decentralized network telemetry oracle on Solana.
+</p>
+<p align="center">
+  <a href="https://github.com/s0nar-nw/s0nar-program/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
+  <img src="https://img.shields.io/badge/Solana-devnet-9945FF?logo=solana&logoColor=white" alt="Solana devnet" />
+  <img src="https://img.shields.io/badge/Anchor-latest-blue" alt="Anchor" /> </br>
+<a href="https://s0nar.online">Website</a>
+    
+</p>
 
+## Overview
+
+<p align="">
 Lightweight observer nodes measure real TPU reachability and slot propagation timing from multiple geographic vantage points and submit signed attestations on-chain. The program aggregates these into a single stake-weighted health score that any Solana program can read.
+</p>
 
 ---
 
 ## What The Program Does
 
+a
 Three observer nodes (Asia, US, EU) each submit a measurement every ~10 seconds. The program stores the latest measurement per observer, computes a health score per region, and aggregates them into a global `NetworkHealthAccount` that serves as the oracle.
 
 Health score formula:
