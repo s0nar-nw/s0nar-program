@@ -85,7 +85,7 @@ pub fn submit(
     observer_account.attestation_count += 1;
 
     // Compute this observer's score by using the helper functions
-    let reachability_pct = (tpu_reachable as u64 / tpu_probed as u64) as u8;
+    let reachability_pct = (tpu_reachable as u64 * 100 / tpu_probed as u64) as u8;
     let observer_score = compute_health_score(reachability_pct, slot_latency_ms);
     let region = observer_account.region;
 
