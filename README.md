@@ -18,15 +18,14 @@ Anchor program for the s0nar decentralized network telemetry oracle on Solana.
 ## Overview
 
 <p align="">
-Lightweight observer nodes measure real TPU reachability and slot propagation timing from multiple geographic vantage points and submit signed attestations on-chain. The program aggregates these into a single stake-weighted health score that any Solana program can read.
+Lightweight observer nodes measure real TPU reachability and slot propagation timing from multiple geographic vantage points and submit signed attestations on-chain. The program aggregates these into a single health score that any Solana program can read.
 </p>
 
 ---
 
 ## What The Program Does
 
-a
-Three observer nodes (Asia, US, EU) each submit a measurement every ~10 seconds. The program stores the latest measurement per observer, computes a health score per region, and aggregates them into a global `NetworkHealthAccount` that serves as the oracle.
+Observers across supported regions submit measurements every ~10 seconds. The program stores the latest measurement per observer, computes a health score per region, and aggregates them into a global `NetworkHealthAccount` that serves as the oracle.
 
 Health score formula:
 
@@ -56,7 +55,8 @@ programs/s0nar-program/src/
     ├── register_observer.rs
     ├── submit_attestation.rs
     ├── crank_aggregation.rs
-    └── deregister_observer.rs
+    ├── deregister_observer.rs
+    └── slash_observer.rs
 ```
 
 ---
@@ -70,6 +70,8 @@ programs/s0nar-program/src/
 | `submit_attestation`  | Observer daemon, every ~10s | Writes latest measurement, immediately updates oracle       |
 | `crank_aggregation`   | Anyone, permissionless      | Full recomputation across all observers, decays stale nodes |
 | `deregister_observer` | Observer or authority       | Returns escrowed stake, marks node inactive                 |
+| `slash_observer`      | Authority                   | Sends part of an observer's escrowed stake to a treasury    |
+| `update_config`       | Authority                   | Updates min stake, observer cap, and paused state           |
 
 ### `initialize`
 
@@ -77,7 +79,7 @@ Parameters: `min_stake_lamports: u64`, `max_observers: u16`. Both must be non-ze
 
 ### `register_observer`
 
-Parameters: `region: Region` (Asia | US | EU). Transfers `min_stake_lamports` from the observer wallet into the `ObserverAccount` PDA as escrow. Fails if the registry is paused or the observer cap is reached.
+Parameters: `region: Region` (`Asia | US | EU | SouthAmerica | Africa | Oceania | Other`). Transfers `min_stake_lamports` from the observer wallet into the `ObserverAccount` PDA as escrow. Fails if the registry is paused or the observer cap is reached.
 
 ### `submit_attestation`
 
@@ -91,6 +93,14 @@ No parameters. Permissionless full recomputation from scratch. **Requires all `O
 
 No parameters. The caller must be either the observer themselves or the registry authority. Transfers escrowed stake back to the observer wallet, sets `is_active = false`, and decrements `registry.active_count`.
 
+### `slash_observer`
+
+Parameters: `slash_bps: u16`. Authority-only instruction that transfers a percentage of an observer's escrowed stake from the observer PDA to a treasury account and reduces `observer_account.stake_lamports` by the same amount.
+
+### `update_config`
+
+Parameters: `min_stake_lamports: Option<u64>`, `max_observers: Option<u16>`, `paused: Option<bool>`. Authority-only instruction for updating registry configuration, including pause/unpause.
+
 ---
 
 ## Accounts
@@ -99,16 +109,16 @@ No parameters. The caller must be either the observer themselves or the registry
 | ---------------------- | ----------------------- | ---- | ------------------------------------------------------ |
 | `RegistryAccount`      | `[b"registry"]`         | 65B  | Global config — authority, stake params, observer cap  |
 | `ObserverAccount`      | `[b"observer", pubkey]` | 128B | Per-observer state — region, stake, latest attestation |
-| `NetworkHealthAccount` | `[b"network_health"]`   | 129B | Oracle — health score and per-region breakdown         |
+| `NetworkHealthAccount` | `[b"network_health"]`   | 205B | Oracle — health score and per-region breakdown         |
 
 **Embedded structs (packed inside accounts above, not standalone):**
 
 | Struct        | Size | Lives In                                |
 | ------------- | ---- | --------------------------------------- |
 | `Attestation` | 32B  | `ObserverAccount.latest_attestation`    |
-| `RegionScore` | 19B  | `NetworkHealthAccount.region_scores[3]` |
+| `RegionScore` | 19B  | `NetworkHealthAccount.region_scores[7]` |
 
-Total rent: ~0.005 SOL for a full 3-observer deployment on devnet.
+Total rent depends on observer count and current account sizes.
 
 ### `RegistryAccount` fields
 
@@ -136,14 +146,14 @@ Total rent: ~0.005 SOL for a full 3-observer deployment on devnet.
 | `min_health_ever`       | `u8`               | Lowest score ever recorded                            |
 | `max_health_ever`       | `u8`               | Highest score ever recorded                           |
 | `total_attestations`    | `u64`              | Cumulative attestation count across all observers     |
-| `region_scores`         | `[RegionScore; 3]` | Per-region breakdown (Asia, US, EU)                   |
+| `region_scores`         | `[RegionScore; 7]` | Per-region breakdown across all supported regions     |
 | `bump`                  | `u8`               | PDA bump seed                                         |
 
 ### `RegionScore` fields
 
 | Field               | Type  | Description                         |
 | ------------------- | ----- | ----------------------------------- |
-| `region`            | `u8`  | Region enum (Asia=0, US=1, EU=2)    |
+| `region`            | `u8`  | Region enum (`Asia`, `US`, `EU`, `SouthAmerica`, `Africa`, `Oceania`, `Other`) |
 | `health_score`      | `u8`  | Score for this region 0–100         |
 | `reachability_pct`  | `u8`  | TPU reachability % from this region |
 | `avg_rtt_us`        | `u32` | Average RTT in microseconds         |
@@ -154,10 +164,11 @@ Total rent: ~0.005 SOL for a full 3-observer deployment on devnet.
 
 ## Admin Controls
 
-The `authority` set during `initialize` has two admin capabilities:
+The `authority` set during `initialize` has these admin capabilities:
 
 - **Deregister any observer** — call `deregister_observer` with `caller = authority` to forcibly remove a misbehaving node and return its stake.
-- **Pause the registry** — set `registry.paused = true` to halt `register_observer`, `submit_attestation`, and `crank_aggregation`. There is no on-chain instruction to flip the paused flag; it must be done via a direct account update with upgrade authority.
+- **Pause or unpause the registry** — call `update_config(..., paused = Some(true | false))` to halt or resume `register_observer`, `submit_attestation`, and `crank_aggregation`.
+- **Slash an observer** — call `slash_observer` to move a percentage of escrowed stake to a treasury account.
 
 ---
 
