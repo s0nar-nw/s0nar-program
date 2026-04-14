@@ -40,4 +40,13 @@ pub enum CustomErrors {
 
     #[msg("Insufficient balance in PDA for stake refund")]
     InsufficientBalanceForRefund,
+
+    #[msg("Invalid slash basis points - must be <= 10000")]
+    InvalidSlashBps,
+
+    #[msg("Observer not found")]
+    ObserverNotFound,
+
+    #[msg("Insufficient balance in PDA for slash")]
+    InsufficientBalanceForSlash,
 }

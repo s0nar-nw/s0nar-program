@@ -176,6 +176,27 @@ mod tests {
         send_tx(svm, &[ix], &[caller])
     }
 
+    fn slash_observer(
+        svm: &mut LiteSVM,
+        auth: &Keypair,
+        observer: &Pubkey,
+        treasury: &Pubkey,
+        slash_bps: u16,
+    ) -> Result<(), TransactionError> {
+        let ix = Instruction {
+            program_id: program_id(),
+            accounts: vec![
+                AccountMeta::new(auth.pubkey(), true),
+                AccountMeta::new_readonly(*observer, false),
+                AccountMeta::new(get_observer_pda(observer), false),
+                AccountMeta::new_readonly(get_registry_pda(), false),
+                AccountMeta::new(*treasury, false),
+            ],
+            data: crate::instruction::SlashObserver { slash_bps }.data(),
+        };
+        send_tx(svm, &[ix], &[auth])
+    }
+
     fn update_config(
         svm: &mut LiteSVM,
         auth: &Keypair,
@@ -912,6 +933,50 @@ mod tests {
             err.is_err(),
             "random user must not deregister another observer"
         );
+    }
+
+    #[test]
+    fn test_slash_observer_moves_funds_to_treasury() {
+        let (mut svm, auth) = setup();
+        init_protocol(&mut svm, &auth, 1_000, 5);
+
+        let obs = Keypair::new();
+        let treasury = Keypair::new();
+        svm.airdrop(&obs.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&treasury.pubkey(), 1).unwrap();
+        register_observer(&mut svm, &obs, crate::Region::Asia).unwrap();
+
+        let treasury_before = svm.get_balance(&treasury.pubkey()).unwrap();
+        slash_observer(&mut svm, &auth, &obs.pubkey(), &treasury.pubkey(), 2_500).unwrap();
+
+        let observer_account = crate::state::ObserverAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_observer_pda(&obs.pubkey()))
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(observer_account.stake_lamports, 750);
+        assert_eq!(svm.get_balance(&treasury.pubkey()).unwrap(), treasury_before + 250);
+    }
+
+    #[test]
+    fn test_slash_observer_requires_authority() {
+        let (mut svm, auth) = setup();
+        init_protocol(&mut svm, &auth, 1_000, 5);
+
+        let obs = Keypair::new();
+        let attacker = Keypair::new();
+        let treasury = Keypair::new();
+        svm.airdrop(&obs.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&attacker.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&treasury.pubkey(), 1).unwrap();
+        register_observer(&mut svm, &obs, crate::Region::US).unwrap();
+
+        let err = slash_observer(&mut svm, &attacker, &obs.pubkey(), &treasury.pubkey(), 1_000);
+        assert!(err.is_err(), "non-authority must not slash observer");
     }
 
     /// Insufficient stake → registration must fail

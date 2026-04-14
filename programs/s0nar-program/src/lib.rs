@@ -55,6 +55,13 @@ pub mod s0nar_program {
         deregister_observer::deregister(ctx)
     }
 
+    pub fn slash_observer(
+        ctx: Context<SlashObserver>,
+        slash_bps: u16,
+    ) -> Result<()> {
+        slash_observer::slash(ctx, slash_bps)
+    }
+
     pub fn update_config(
         ctx: Context<UpdateConfig>,
         min_stake_lamports: Option<u64>,
