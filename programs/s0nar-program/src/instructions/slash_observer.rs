@@ -54,9 +54,7 @@ pub fn slash(ctx: Context<SlashObserver>, slash_bps: u16) -> Result<()> {
     **observer_info.try_borrow_mut_lamports()? -= slash_amount;
     **treasury_info.try_borrow_mut_lamports()? += slash_amount;
 
-    observer_account.stake_lamports = observer_account
-        .stake_lamports
-        .saturating_sub(slash_amount);
+    observer_account.stake_lamports = observer_account.stake_lamports.saturating_sub(slash_amount);
 
     Ok(())
 }

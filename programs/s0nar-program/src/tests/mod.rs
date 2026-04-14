@@ -959,7 +959,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(observer_account.stake_lamports, 750);
-        assert_eq!(svm.get_balance(&treasury.pubkey()).unwrap(), treasury_before + 250);
+        assert_eq!(
+            svm.get_balance(&treasury.pubkey()).unwrap(),
+            treasury_before + 250
+        );
     }
 
     #[test]
@@ -971,11 +974,18 @@ mod tests {
         let attacker = Keypair::new();
         let treasury = Keypair::new();
         svm.airdrop(&obs.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
-        svm.airdrop(&attacker.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&attacker.pubkey(), 10 * LAMPORTS_PER_SOL)
+            .unwrap();
         svm.airdrop(&treasury.pubkey(), 1).unwrap();
         register_observer(&mut svm, &obs, crate::Region::US).unwrap();
 
-        let err = slash_observer(&mut svm, &attacker, &obs.pubkey(), &treasury.pubkey(), 1_000);
+        let err = slash_observer(
+            &mut svm,
+            &attacker,
+            &obs.pubkey(),
+            &treasury.pubkey(),
+            1_000,
+        );
         assert!(err.is_err(), "non-authority must not slash observer");
     }
 
