@@ -68,3 +68,5 @@ pub mod s0nar_program {
         update_config::update(ctx, min_stake_lamports, max_observers, paused)
     }
 }
+
+pub use crate::s0nar_program::*;
