@@ -270,33 +270,34 @@ mod tests {
             health.region_scores.len(),
             crate::state::NetworkHealthAccount::REGION_COUNT
         );
-        assert!(health.region_scores.iter().any(|rs| rs.region == crate::Region::Asia));
-        assert!(health.region_scores.iter().any(|rs| rs.region == crate::Region::US));
-        assert!(health.region_scores.iter().any(|rs| rs.region == crate::Region::EU));
-        assert!(
-            health
-                .region_scores
-                .iter()
-                .any(|rs| rs.region == crate::Region::SouthAmerica)
-        );
-        assert!(
-            health
-                .region_scores
-                .iter()
-                .any(|rs| rs.region == crate::Region::Africa)
-        );
-        assert!(
-            health
-                .region_scores
-                .iter()
-                .any(|rs| rs.region == crate::Region::Oceania)
-        );
-        assert!(
-            health
-                .region_scores
-                .iter()
-                .any(|rs| rs.region == crate::Region::Other)
-        );
+        assert!(health
+            .region_scores
+            .iter()
+            .any(|rs| rs.region == crate::Region::Asia));
+        assert!(health
+            .region_scores
+            .iter()
+            .any(|rs| rs.region == crate::Region::US));
+        assert!(health
+            .region_scores
+            .iter()
+            .any(|rs| rs.region == crate::Region::EU));
+        assert!(health
+            .region_scores
+            .iter()
+            .any(|rs| rs.region == crate::Region::SouthAmerica));
+        assert!(health
+            .region_scores
+            .iter()
+            .any(|rs| rs.region == crate::Region::Africa));
+        assert!(health
+            .region_scores
+            .iter()
+            .any(|rs| rs.region == crate::Region::Oceania));
+        assert!(health
+            .region_scores
+            .iter()
+            .any(|rs| rs.region == crate::Region::Other));
     }
 
     #[test]
@@ -731,8 +732,14 @@ mod tests {
             .find(|rs| rs.region == crate::Region::EU)
             .unwrap();
 
-        assert!(asia_score.health_score > 0, "active region should remain populated");
-        assert_eq!(eu_score.health_score, 0, "stale region score should be cleared");
+        assert!(
+            asia_score.health_score > 0,
+            "active region should remain populated"
+        );
+        assert_eq!(
+            eu_score.health_score, 0,
+            "stale region score should be cleared"
+        );
         assert_eq!(
             eu_score.reachability_pct, 0,
             "stale region reachability should be cleared"
