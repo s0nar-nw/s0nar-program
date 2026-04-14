@@ -253,6 +253,53 @@ mod tests {
     }
 
     #[test]
+    fn test_initialize_populates_all_region_slots() {
+        let (mut svm, authority) = setup();
+        init_protocol(&mut svm, &authority, 1, 10);
+
+        let health = crate::state::NetworkHealthAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_network_health_pda())
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            health.region_scores.len(),
+            crate::state::NetworkHealthAccount::REGION_COUNT
+        );
+        assert!(health.region_scores.iter().any(|rs| rs.region == crate::Region::Asia));
+        assert!(health.region_scores.iter().any(|rs| rs.region == crate::Region::US));
+        assert!(health.region_scores.iter().any(|rs| rs.region == crate::Region::EU));
+        assert!(
+            health
+                .region_scores
+                .iter()
+                .any(|rs| rs.region == crate::Region::SouthAmerica)
+        );
+        assert!(
+            health
+                .region_scores
+                .iter()
+                .any(|rs| rs.region == crate::Region::Africa)
+        );
+        assert!(
+            health
+                .region_scores
+                .iter()
+                .any(|rs| rs.region == crate::Region::Oceania)
+        );
+        assert!(
+            health
+                .region_scores
+                .iter()
+                .any(|rs| rs.region == crate::Region::Other)
+        );
+    }
+
+    #[test]
     fn test_failures_and_refund() {
         let (mut svm, auth) = setup();
         init_protocol(&mut svm, &auth, LAMPORTS_PER_SOL, 2);

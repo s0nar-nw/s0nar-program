@@ -82,6 +82,22 @@ pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u1
                 region: Region::EU,
                 ..Default::default()
             },
+            RegionScore {
+                region: Region::SouthAmerica,
+                ..Default::default()
+            },
+            RegionScore {
+                region: Region::Africa,
+                ..Default::default()
+            },
+            RegionScore {
+                region: Region::Oceania,
+                ..Default::default()
+            },
+            RegionScore {
+                region: Region::Other,
+                ..Default::default()
+            },
         ],
         bump: ctx.bumps.network_health,
     });

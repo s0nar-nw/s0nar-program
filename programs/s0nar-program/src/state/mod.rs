@@ -67,13 +67,16 @@ impl Attestation {
         + 2; // tpu_probed
 }
 /// Geographic region of an observer node - serializes as u8 on-chain
-/// Right now this supports only 3 regions
 #[derive(Default, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Region {
     #[default]
     Asia,
     US,
     EU,
+    SouthAmerica,
+    Africa,
+    Oceania,
+    Other,
 }
 
 /// Per-observer state - stores identity, region, stake and latest measurement
@@ -164,13 +167,15 @@ pub struct NetworkHealthAccount {
     pub total_attestations: u64,
 
     /// One entry per region
-    pub region_scores: [RegionScore; 3],
+    pub region_scores: [RegionScore; 7],
 
     /// PDA bump seed
     pub bump: u8,
 }
 
 impl NetworkHealthAccount {
+    pub const REGION_COUNT: usize = 7;
+
     pub const LEN: usize = 8           // discriminator
         + 1                             // health_score
         + 1                             // tpu_reachability_pct
@@ -181,7 +186,7 @@ impl NetworkHealthAccount {
         + 1                             // min_health_ever
         + 1                             // max_health_ever
         + 8                             // total_attestations
-        + (3 * RegionScore::LEN)        // region_scores (57)
+        + (Self::REGION_COUNT * RegionScore::LEN)
         + 1                             // bump
         + 29; // padding
 }

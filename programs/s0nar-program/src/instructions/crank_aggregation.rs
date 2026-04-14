@@ -139,7 +139,7 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
     }
 
     msg!(
-        "Crank: score={} reach={}% latency={}ms active={}/3 slot={}",
+        "Crank: score={} reach={}% latency={}ms active_regions={} slot={}",
         global_score,
         avg_reach,
         avg_latency,
