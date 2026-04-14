@@ -94,6 +94,15 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
     // write snapshots to network_health
     let network_health = &mut ctx.accounts.network_health;
 
+    for rs in network_health.region_scores.iter_mut() {
+        if !snapshots.iter().any(|snap| snap.region == rs.region) {
+            rs.health_score = 0;
+            rs.reachability_pct = 0;
+            rs.avg_rtt_us = 0;
+            rs.slot_latency_ms = 0;
+        }
+    }
+
     for snap in snapshots.iter() {
         for rs in network_health.region_scores.iter_mut() {
             if rs.region == snap.region {

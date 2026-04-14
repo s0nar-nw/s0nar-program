@@ -672,6 +672,33 @@ mod tests {
             "only active observer should count"
         );
         assert!(health.health_score > 0);
+
+        let asia_score = health
+            .region_scores
+            .iter()
+            .find(|rs| rs.region == crate::Region::Asia)
+            .unwrap();
+        let eu_score = health
+            .region_scores
+            .iter()
+            .find(|rs| rs.region == crate::Region::EU)
+            .unwrap();
+
+        assert!(asia_score.health_score > 0, "active region should remain populated");
+        assert_eq!(eu_score.health_score, 0, "stale region score should be cleared");
+        assert_eq!(
+            eu_score.reachability_pct, 0,
+            "stale region reachability should be cleared"
+        );
+        assert_eq!(eu_score.avg_rtt_us, 0, "stale region RTT should be cleared");
+        assert_eq!(
+            eu_score.slot_latency_ms, 0,
+            "stale region latency should be cleared"
+        );
+        assert!(
+            eu_score.last_updated_slot > 0,
+            "stale region should retain last update marker"
+        );
     }
 
     // ----------------------input validation----------------------
