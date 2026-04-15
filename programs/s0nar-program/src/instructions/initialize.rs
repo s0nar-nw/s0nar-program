@@ -63,6 +63,7 @@ pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u1
         tpu_reachability_pct: 0,
         avg_slot_latency_ms: 0,
         active_observer_count: 0,
+        active_region_count: 0,
         last_updated_slot: 0,
         last_updated_ts: 0,
         // Initialize with worst possible value so first update always lowers it

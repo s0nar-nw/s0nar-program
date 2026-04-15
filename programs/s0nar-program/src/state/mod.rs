@@ -167,8 +167,10 @@ pub struct NetworkHealthAccount {
     pub tpu_reachability_pct: u8,
     /// Average slot latency in milliseconds
     pub avg_slot_latency_ms: u32,
-    /// Number of observers that contributed to this score
+    /// Number of active observers that contributed to this score
     pub active_observer_count: u16,
+    /// Number of regions with fresh attestations
+    pub active_region_count: u16,
     /// Slot of last aggregation — dApps check this for staleness
     pub last_updated_slot: u64,
     /// Unix timestamp of last update
@@ -196,6 +198,7 @@ impl NetworkHealthAccount {
         + 1                             // tpu_reachability_pct
         + 4                             // avg_slot_latency_ms
         + 2                             // active_observer_count
+        + 2                             // active_region_count
         + 8                             // last_updated_slot
         + 8                             // last_updated_ts
         + 1                             // min_health_ever
@@ -203,5 +206,5 @@ impl NetworkHealthAccount {
         + 8                             // total_attestations
         + (Self::REGION_COUNT * RegionScore::LEN)
         + 1                             // bump
-        + 29; // padding
+        + 27; // padding
 }

@@ -52,7 +52,10 @@ pub fn count_active_regions(health: &NetworkHealthAccount, current_slot: u64) ->
     health
         .region_scores
         .iter()
-        .filter(|rs| current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS)
+        .filter(|rs| {
+            rs.observer_count > 0
+                && current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS
+        })
         .count() as u16
 }
 

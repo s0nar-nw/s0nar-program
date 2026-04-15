@@ -121,17 +121,17 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
 
     // Recompute global aggregates
     let global_score = recompute_global_score(network_health, current_slot);
-    let active_count = count_active_regions(network_health, current_slot);
+    let active_region_count = count_active_regions(network_health, current_slot);
 
-    require!(active_count > 0, CustomErrors::NoActiveObservers);
+    require!(active_region_count > 0, CustomErrors::NoActiveObservers);
 
     let (avg_reach, avg_latency) = compute_avg_reach_latency(network_health, current_slot);
 
     network_health.health_score = global_score;
     network_health.tpu_reachability_pct = avg_reach;
     network_health.avg_slot_latency_ms = avg_latency;
-    network_health.active_observer_count = active_count;
-    network_health.last_updated_slot = current_slot;
+    network_health.active_region_count = active_region_count;
+    network_health.active_observer_count = snapshots.len() as u16;    network_health.last_updated_slot = current_slot;
     network_health.last_updated_ts = clock.unix_timestamp;
 
     if global_score < network_health.min_health_ever {
@@ -142,11 +142,12 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
     }
 
     msg!(
-        "Crank: score={} reach={}% latency={}ms active_regions={} slot={}",
+        "Crank: score={} reach={}% latency={}ms active_observers={} active_regions={} slot={}",
         global_score,
         avg_reach,
         avg_latency,
-        active_count,
+        snapshots.len(),
+        active_region_count,
         current_slot,
     );
 

@@ -150,7 +150,13 @@ pub fn submit(
     network_health.last_updated_slot = clock.slot;
     network_health.last_updated_ts = clock.unix_timestamp;
     network_health.total_attestations += 1;
-    network_health.active_observer_count = count_active_regions(network_health, clock.slot);
+    network_health.active_region_count = count_active_regions(network_health, clock.slot);
+    network_health.active_observer_count = network_health
+        .region_scores
+        .iter()
+        .filter(|rs| clock.slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS)
+        .map(|rs| rs.observer_count as u32)
+        .sum::<u32>() as u16; // submit path doesn't have access to all observers, so active_observer_count can't be computed accurately here. Sum observer_count across all fresh regions as a proxy
 
     // These are all time records
     if network_health.min_health_ever > global_score {
