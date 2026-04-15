@@ -131,7 +131,8 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
     network_health.tpu_reachability_pct = avg_reach;
     network_health.avg_slot_latency_ms = avg_latency;
     network_health.active_region_count = active_region_count;
-    network_health.active_observer_count = snapshots.len() as u16;    network_health.last_updated_slot = current_slot;
+    network_health.active_observer_count = snapshots.len() as u16;
+    network_health.last_updated_slot = current_slot;
     network_health.last_updated_ts = clock.unix_timestamp;
 
     if global_score < network_health.min_health_ever {

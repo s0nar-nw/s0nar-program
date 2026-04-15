@@ -1553,12 +1553,12 @@ mod tests {
 
         assert_eq!(registry.paused, false, "Paused should be unpaused");
     }
-    
+
     #[test]
     fn test_active_observer_count_vs_active_region_count() {
         let (mut svm, auth) = setup();
         init_protocol(&mut svm, &auth, 1, 10);
-    
+
         // 3 observers, 2 in Asia and 1 in EU → 3 observers but only 2 regions
         let obs1 = Keypair::new();
         let obs2 = Keypair::new();
@@ -1566,18 +1566,23 @@ mod tests {
         svm.airdrop(&obs1.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
         svm.airdrop(&obs2.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
         svm.airdrop(&obs3.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
-    
+
         register_observer(&mut svm, &obs1, crate::Region::Asia).unwrap();
         register_observer(&mut svm, &obs2, crate::Region::Asia).unwrap(); // same region as obs1
         register_observer(&mut svm, &obs3, crate::Region::EU).unwrap();
-    
+
         advance_slot(&mut svm, 1);
         submit_attestation(&mut svm, &obs1, 90, 100, 200).unwrap();
         submit_attestation(&mut svm, &obs2, 80, 100, 300).unwrap();
         submit_attestation(&mut svm, &obs3, 85, 100, 250).unwrap();
-    
-        crank_aggregation(&mut svm, &auth, &[obs1.pubkey(), obs2.pubkey(), obs3.pubkey()]).unwrap();
-    
+
+        crank_aggregation(
+            &mut svm,
+            &auth,
+            &[obs1.pubkey(), obs2.pubkey(), obs3.pubkey()],
+        )
+        .unwrap();
+
         let health = crate::state::NetworkHealthAccount::try_deserialize(
             &mut svm
                 .get_account(&get_network_health_pda())
@@ -1586,15 +1591,18 @@ mod tests {
                 .as_ref(),
         )
         .unwrap();
-    
+
         // The key assertion: these must differ — 3 observers across 2 regions
         assert_eq!(health.active_observer_count, 3, "3 observers submitted");
-        assert_eq!(health.active_region_count, 2, "only 2 distinct regions active");
+        assert_eq!(
+            health.active_region_count, 2,
+            "only 2 distinct regions active"
+        );
         assert_ne!(
             health.active_observer_count, health.active_region_count,
             "observer count and region count must differ when multiple observers share a region"
         );
-    
+
         // Also verify the Asia region aggregated correctly (avg of obs1+obs2)
         let asia = health
             .region_scores
@@ -1602,8 +1610,9 @@ mod tests {
             .find(|rs| rs.region == crate::Region::Asia)
             .unwrap();
         assert_eq!(asia.observer_count, 2, "Asia should have 2 observers");
-        assert_eq!(asia.reachability_pct, 85, "Asia reachability should be averaged");
+        assert_eq!(
+            asia.reachability_pct, 85,
+            "Asia reachability should be averaged"
+        );
     }
 }
-
-
