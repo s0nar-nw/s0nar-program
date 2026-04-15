@@ -33,7 +33,8 @@ pub fn recompute_global_score(health: &NetworkHealthAccount, current_slot: u64) 
     let mut count = 0u32;
 
     for rs in health.region_scores.iter() {
-        if current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS {
+        if rs.observer_count > 0 && current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS
+        {
             score_sum += rs.health_score as u32;
             count += 1;
         }
@@ -68,7 +69,8 @@ pub fn compute_avg_reach_latency(health: &NetworkHealthAccount, current_slot: u6
     let mut reach_sum = 0u32;
 
     for rs in health.region_scores.iter() {
-        if current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS {
+        if rs.observer_count > 0 && current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS
+        {
             count += 1;
             latency_sum += rs.slot_latency_ms;
             reach_sum += rs.reachability_pct as u32;
