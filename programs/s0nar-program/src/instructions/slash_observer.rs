@@ -17,6 +17,7 @@ pub struct SlashObserver<'info> {
     pub observer_account: Account<'info, ObserverAccount>,
 
     #[account(
+        mut,
         seeds = [REGISTRY_SEED],
         bump = registry.bump,
         has_one = authority @ CustomErrors::UnAuthorizedCaller,
@@ -55,6 +56,11 @@ pub fn slash(ctx: Context<SlashObserver>, slash_bps: u16) -> Result<()> {
     **treasury_info.try_borrow_mut_lamports()? += slash_amount;
 
     observer_account.stake_lamports = observer_account.stake_lamports.saturating_sub(slash_amount);
+
+    if observer_account.stake_lamports < ctx.accounts.registry.min_stake_lamports {
+        observer_account.is_active = false;
+        ctx.accounts.registry.active_count = ctx.accounts.registry.active_count.saturating_sub(1);
+    }
 
     Ok(())
 }

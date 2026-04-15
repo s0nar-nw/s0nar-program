@@ -189,7 +189,7 @@ mod tests {
                 AccountMeta::new(auth.pubkey(), true),
                 AccountMeta::new_readonly(*observer, false),
                 AccountMeta::new(get_observer_pda(observer), false),
-                AccountMeta::new_readonly(get_registry_pda(), false),
+                AccountMeta::new(get_registry_pda(), false),
                 AccountMeta::new(*treasury, false),
             ],
             data: crate::instruction::SlashObserver { slash_bps }.data(),
@@ -962,6 +962,43 @@ mod tests {
         assert_eq!(
             svm.get_balance(&treasury.pubkey()).unwrap(),
             treasury_before + 250
+        );
+        // 750 < min_stake (1_000) → must be deactivated
+        assert!(
+            !observer_account.is_active,
+            "observer should be deactivated when stake drops below minimum"
+        );
+    }
+
+    #[test]
+    fn test_slash_observer_stays_active_above_minimum() {
+        let (mut svm, auth) = setup();
+        init_protocol(&mut svm, &auth, 1_000, 5); // Start with 1000 min_stake
+
+        let obs = Keypair::new();
+        let treasury = Keypair::new();
+        svm.airdrop(&obs.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&treasury.pubkey(), 1).unwrap();
+        register_observer(&mut svm, &obs, crate::Region::Asia).unwrap();
+
+        // Lower min_stake to 500 so 750 remaining keeps observer active
+        update_config(&mut svm, &auth, Some(500), None, None).unwrap();
+
+        slash_observer(&mut svm, &auth, &obs.pubkey(), &treasury.pubkey(), 2_500).unwrap();
+
+        let observer_account = crate::state::ObserverAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_observer_pda(&obs.pubkey()))
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        assert_eq!(observer_account.stake_lamports, 750);
+        assert!(
+            observer_account.is_active,
+            "observer should remain active when stake stays above minimum"
         );
     }
 
