@@ -3,8 +3,8 @@ use anchor_lang::prelude::*;
 use crate::{
     error::CustomErrors,
     utils::{
-        compute_avg_reach_latency, compute_health_score, count_active_regions,
-        recompute_global_score,
+        clear_region_aggregate, compute_avg_reach_latency, compute_health_score,
+        count_active_regions, recompute_global_score, set_region_averages,
     },
     NetworkHealthAccount, ObserverAccount, Region, RegistryAccount, NETWORK_HEALTH_SEED,
     REGISTRY_SEED, STALE_SLOTS,
@@ -95,22 +95,25 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
     let network_health = &mut ctx.accounts.network_health;
 
     for rs in network_health.region_scores.iter_mut() {
-        if !snapshots.iter().any(|snap| snap.region == rs.region) {
-            rs.health_score = 0;
-            rs.reachability_pct = 0;
-            rs.avg_rtt_us = 0;
-            rs.slot_latency_ms = 0;
-        }
+        let last_updated_slot = rs.last_updated_slot;
+        clear_region_aggregate(rs);
+        rs.last_updated_slot = last_updated_slot;
     }
 
     for snap in snapshots.iter() {
         for rs in network_health.region_scores.iter_mut() {
             if rs.region == snap.region {
-                rs.health_score = snap.score;
-                rs.reachability_pct = snap.reachability_pct;
-                rs.avg_rtt_us = snap.avg_rtt_us;
-                rs.slot_latency_ms = snap.slot_latency_ms;
-                rs.last_updated_slot = snap.attestation_slot;
+                rs.observer_count = rs.observer_count.saturating_add(1);
+                rs.total_health_score = rs.total_health_score.saturating_add(snap.score as u32);
+                rs.total_reachability_pct = rs
+                    .total_reachability_pct
+                    .saturating_add(snap.reachability_pct as u32);
+                rs.total_avg_rtt_us = rs.total_avg_rtt_us.saturating_add(snap.avg_rtt_us as u64);
+                rs.total_slot_latency_ms = rs
+                    .total_slot_latency_ms
+                    .saturating_add(snap.slot_latency_ms as u64);
+                rs.last_updated_slot = rs.last_updated_slot.max(snap.attestation_slot);
+                set_region_averages(rs);
                 break;
             }
         }

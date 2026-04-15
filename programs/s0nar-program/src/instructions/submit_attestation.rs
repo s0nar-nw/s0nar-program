@@ -3,11 +3,11 @@ use anchor_lang::prelude::*;
 use crate::{
     error::CustomErrors,
     utils::{
-        compute_avg_reach_latency, compute_health_score, count_active_regions,
-        recompute_global_score,
+        clear_region_aggregate, compute_avg_reach_latency, compute_health_score,
+        count_active_regions, recompute_global_score, set_region_averages,
     },
     Attestation, NetworkHealthAccount, ObserverAccount, RegistryAccount, NETWORK_HEALTH_SEED,
-    OBSERVER_SEED, REGISTRY_SEED,
+    OBSERVER_SEED, REGISTRY_SEED, STALE_SLOTS,
 };
 
 #[derive(Accounts)]
@@ -67,6 +67,13 @@ pub fn submit(
         CustomErrors::StaleAttestation
     );
 
+    let observer_account = &mut ctx.accounts.observer_account;
+    let region = observer_account.region;
+    let previous_attestation = observer_account.latest_attestation;
+    let previous_attestation_slot = observer_account.last_attestation_slot;
+    let had_previous_fresh_attestation = observer_account.attestation_count > 0
+        && clock.slot.saturating_sub(previous_attestation_slot) <= STALE_SLOTS;
+
     // Build the attestation
     let attestation = Attestation {
         slot: clock.slot,
@@ -79,7 +86,6 @@ pub fn submit(
     };
 
     // Update the observer account
-    let observer_account = &mut ctx.accounts.observer_account;
     observer_account.latest_attestation = attestation;
     observer_account.last_attestation_slot = clock.slot;
     observer_account.attestation_count += 1;
@@ -87,18 +93,53 @@ pub fn submit(
     // Compute this observer's score by using the helper functions
     let reachability_pct = (tpu_reachable as u64 * 100 / tpu_probed as u64) as u8;
     let observer_score = compute_health_score(reachability_pct, slot_latency_ms);
-    let region = observer_account.region;
-
     let network_health = &mut ctx.accounts.network_health;
 
-    // Find this observer's region entry and update it
+    let previous_reachability_pct = if previous_attestation.tpu_probed == 0 {
+        0
+    } else {
+        (previous_attestation.tpu_reachable as u64 * 100 / previous_attestation.tpu_probed as u64)
+            as u8
+    };
+    let previous_observer_score = compute_health_score(
+        previous_reachability_pct,
+        previous_attestation.slot_latency_ms,
+    );
+
+    // Find this observer's region entry and update the region aggregate
     for rs in network_health.region_scores.iter_mut() {
         if rs.region == region {
-            rs.health_score = observer_score;
-            rs.avg_rtt_us = avg_rtt_us;
-            rs.slot_latency_ms = slot_latency_ms;
-            rs.reachability_pct = reachability_pct;
+            if clock.slot.saturating_sub(rs.last_updated_slot) > STALE_SLOTS {
+                clear_region_aggregate(rs);
+            }
+
+            if had_previous_fresh_attestation && rs.observer_count > 0 {
+                rs.total_health_score = rs
+                    .total_health_score
+                    .saturating_sub(previous_observer_score as u32);
+                rs.total_reachability_pct = rs
+                    .total_reachability_pct
+                    .saturating_sub(previous_reachability_pct as u32);
+                rs.total_avg_rtt_us = rs
+                    .total_avg_rtt_us
+                    .saturating_sub(previous_attestation.avg_rtt_us as u64);
+                rs.total_slot_latency_ms = rs
+                    .total_slot_latency_ms
+                    .saturating_sub(previous_attestation.slot_latency_ms as u64);
+            } else {
+                rs.observer_count = rs.observer_count.saturating_add(1);
+            }
+
+            rs.total_health_score = rs.total_health_score.saturating_add(observer_score as u32);
+            rs.total_reachability_pct = rs
+                .total_reachability_pct
+                .saturating_add(reachability_pct as u32);
+            rs.total_avg_rtt_us = rs.total_avg_rtt_us.saturating_add(avg_rtt_us as u64);
+            rs.total_slot_latency_ms = rs
+                .total_slot_latency_ms
+                .saturating_add(slot_latency_ms as u64);
             rs.last_updated_slot = clock.slot;
+            set_region_averages(rs);
             break;
         }
     }

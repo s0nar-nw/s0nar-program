@@ -1387,6 +1387,66 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_same_region_observers_are_averaged_instead_of_overwritten() {
+        let (mut svm, auth) = setup();
+        init_protocol(&mut svm, &auth, 1, 5);
+
+        let obs1 = Keypair::new();
+        let obs2 = Keypair::new();
+        svm.airdrop(&obs1.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&obs2.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+
+        register_observer(&mut svm, &obs1, crate::Region::Asia).unwrap();
+        register_observer(&mut svm, &obs2, crate::Region::Asia).unwrap();
+
+        advance_slot(&mut svm, 1);
+        submit_attestation(&mut svm, &obs1, 90, 100, 200).unwrap();
+        submit_attestation(&mut svm, &obs2, 80, 100, 300).unwrap();
+
+        let mut health = crate::state::NetworkHealthAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_network_health_pda())
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        let asia_score = health
+            .region_scores
+            .iter()
+            .find(|rs| rs.region == crate::Region::Asia)
+            .unwrap();
+
+        assert_eq!(asia_score.observer_count, 2);
+        assert_eq!(asia_score.reachability_pct, 85);
+        assert_eq!(asia_score.slot_latency_ms, 250);
+        assert_eq!(asia_score.health_score, 70);
+
+        crank_aggregation(&mut svm, &auth, &[obs1.pubkey(), obs2.pubkey()]).unwrap();
+
+        health = crate::state::NetworkHealthAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_network_health_pda())
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        let asia_score = health
+            .region_scores
+            .iter()
+            .find(|rs| rs.region == crate::Region::Asia)
+            .unwrap();
+
+        assert_eq!(asia_score.observer_count, 2);
+        assert_eq!(asia_score.reachability_pct, 85);
+        assert_eq!(asia_score.slot_latency_ms, 250);
+        assert_eq!(asia_score.health_score, 70);
+    }
+
     // tests min max score tracking
     #[test]
     fn test_min_max_survives_crank() {

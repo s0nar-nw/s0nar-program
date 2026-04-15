@@ -123,6 +123,9 @@ pub struct RegionScore {
     /// Which region this entry represents
     pub region: Region,
 
+    /// Number of observer contributions currently represented in this region aggregate
+    pub observer_count: u16,
+
     /// Health score from this region
     pub health_score: u8,
 
@@ -137,10 +140,22 @@ pub struct RegionScore {
 
     /// Slot when this region last reported
     pub last_updated_slot: u64,
+
+    /// Running total of health scores for observers in this region
+    pub total_health_score: u32,
+
+    /// Running total of reachability percentages for observers in this region
+    pub total_reachability_pct: u32,
+
+    /// Running total of RTT values for observers in this region
+    pub total_avg_rtt_us: u64,
+
+    /// Running total of slot latency values for observers in this region
+    pub total_slot_latency_ms: u64,
 }
 
 impl RegionScore {
-    pub const LEN: usize = 1 + 1 + 1 + 4 + 4 + 8;
+    pub const LEN: usize = 1 + 2 + 1 + 1 + 4 + 4 + 8 + 4 + 4 + 8 + 8;
 }
 
 /// Global oracle account - the single source of truth for dApps and UI reads

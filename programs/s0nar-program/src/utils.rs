@@ -1,4 +1,7 @@
-use crate::state::NetworkHealthAccount;
+use crate::{
+    state::{NetworkHealthAccount, RegionScore},
+    STALE_SLOTS,
+};
 
 /// Computes a single observer's health score (0-100).
 /// Reachability carries more weight because a slow network is still
@@ -26,10 +29,6 @@ pub fn compute_health_score(reachability_pct: u8, slot_latency_ms: u32) -> u8 {
 /// current network conditions if that observer has gone offline.
 /// Returns 0 if all regions are stale (no active observers).
 pub fn recompute_global_score(health: &NetworkHealthAccount, current_slot: u64) -> u8 {
-    // Here we are 150 slots as stale because
-    // 150 x 400ms = 60 seconds so more that these stale slots we can assume
-    // the slots present in there are old and not relevant for the current score
-    const STALE_SLOTS: u64 = 150;
     let mut score_sum: u32 = 0;
     let mut count = 0u32;
 
@@ -50,8 +49,6 @@ pub fn recompute_global_score(health: &NetworkHealthAccount, current_slot: u64) 
 /// Counts how many regions have submitted a fresh attestation recently.
 /// Used to populate network_health.active_observer_count.
 pub fn count_active_regions(health: &NetworkHealthAccount, current_slot: u64) -> u16 {
-    const STALE_SLOTS: u64 = 150;
-
     health
         .region_scores
         .iter()
@@ -63,7 +60,6 @@ pub fn count_active_regions(health: &NetworkHealthAccount, current_slot: u64) ->
 /// Same staleness filter as recompute_global_score — stale regions are excluded.
 /// Returns a tuple: (reachability_pct: u8, avg_slot_latency_ms: u32)
 pub fn compute_avg_reach_latency(health: &NetworkHealthAccount, current_slot: u64) -> (u8, u32) {
-    const STALE_SLOTS: u64 = 150;
     let mut count = 0u32;
     let mut latency_sum = 0u32;
     let mut reach_sum = 0u32;
@@ -84,4 +80,42 @@ pub fn compute_avg_reach_latency(health: &NetworkHealthAccount, current_slot: u6
             latency_sum.checked_div(count).unwrap_or(0),
         )
     }
+}
+
+pub fn set_region_averages(region_score: &mut RegionScore) {
+    if region_score.observer_count == 0 {
+        region_score.health_score = 0;
+        region_score.reachability_pct = 0;
+        region_score.avg_rtt_us = 0;
+        region_score.slot_latency_ms = 0;
+        return;
+    }
+
+    let count = region_score.observer_count as u32;
+
+    region_score.health_score = region_score
+        .total_health_score
+        .checked_div(count)
+        .unwrap_or(0) as u8;
+    region_score.reachability_pct = region_score
+        .total_reachability_pct
+        .checked_div(count)
+        .unwrap_or(0) as u8;
+    region_score.avg_rtt_us = region_score
+        .total_avg_rtt_us
+        .checked_div(count as u64)
+        .unwrap_or(0) as u32;
+    region_score.slot_latency_ms = region_score
+        .total_slot_latency_ms
+        .checked_div(count as u64)
+        .unwrap_or(0) as u32;
+}
+
+pub fn clear_region_aggregate(region_score: &mut RegionScore) {
+    region_score.observer_count = 0;
+    region_score.total_health_score = 0;
+    region_score.total_reachability_pct = 0;
+    region_score.total_avg_rtt_us = 0;
+    region_score.total_slot_latency_ms = 0;
+    set_region_averages(region_score);
 }
