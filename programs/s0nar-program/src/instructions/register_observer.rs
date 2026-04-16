@@ -83,8 +83,8 @@ pub fn register(ctx: Context<RegisterObserver>, region: Region) -> Result<()> {
     let registry = &mut ctx.accounts.registry;
 
     // Increment registry counts
-    registry.observer_count += 1;
-    registry.active_count += 1;
+    registry.observer_count = registry.observer_count.saturating_add(1);
+    registry.active_count = registry.active_count.saturating_add(1);
 
     emit!(crate::events::ObserverRegistered {
         observer: ctx.accounts.observer.key(),

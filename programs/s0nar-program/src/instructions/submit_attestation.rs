@@ -98,7 +98,7 @@ pub fn submit(
     // Update the observer account
     observer_account.latest_attestation = attestation;
     observer_account.last_attestation_slot = clock.slot;
-    observer_account.attestation_count += 1;
+    observer_account.attestation_count = observer_account.attestation_count.saturating_add(1);
 
     // Compute this observer's score by using the helper functions
     let reachability_pct = (tpu_reachable as u64 * 100 / tpu_probed as u64) as u8;
@@ -159,7 +159,7 @@ pub fn submit(
     network_health.health_score = global_score;
     network_health.last_updated_slot = clock.slot;
     network_health.last_updated_ts = clock.unix_timestamp;
-    network_health.total_attestations += 1;
+    network_health.total_attestations = network_health.total_attestations.saturating_add(1);
     network_health.active_region_count = count_active_regions(network_health, clock.slot);
     network_health.active_observer_count = network_health
         .region_scores
