@@ -86,5 +86,11 @@ pub fn register(ctx: Context<RegisterObserver>, region: Region) -> Result<()> {
     registry.observer_count += 1;
     registry.active_count += 1;
 
+    emit!(crate::events::ObserverRegistered {
+        observer: ctx.accounts.observer.key(),
+        region,
+        stake_lamports: min_stake_lamports,
+    });
+
     Ok(())
 }

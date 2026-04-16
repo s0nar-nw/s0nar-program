@@ -190,5 +190,14 @@ pub fn submit(
         clock.slot,
     );
 
+    emit!(crate::events::AttestationSubmitted {
+        observer: ctx.accounts.authority.key(),
+        region,
+        score: observer_score,
+        reachability_pct,
+        slot_latency_ms,
+        slot: clock.slot,
+    });
+
     Ok(())
 }

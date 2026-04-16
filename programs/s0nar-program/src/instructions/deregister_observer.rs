@@ -68,5 +68,9 @@ pub fn deregister(ctx: Context<DeregisterObserver>) -> Result<()> {
     registry.observer_count = registry.observer_count.saturating_sub(1);
     registry.active_count = registry.active_count.saturating_sub(1);
 
+    emit!(crate::events::ObserverDeregistered {
+        observer: ctx.accounts.observer_wallet.key(),
+    });
+
     Ok(())
 }

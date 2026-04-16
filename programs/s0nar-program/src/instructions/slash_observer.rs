@@ -62,5 +62,11 @@ pub fn slash(ctx: Context<SlashObserver>, slash_bps: u16) -> Result<()> {
         ctx.accounts.registry.active_count = ctx.accounts.registry.active_count.saturating_sub(1);
     }
 
+    emit!(crate::events::ObserverSlashed {
+        observer: ctx.accounts.observer_wallet.key(),
+        slash_bps,
+        amount_slashed: slash_amount,
+    });
+
     Ok(())
 }

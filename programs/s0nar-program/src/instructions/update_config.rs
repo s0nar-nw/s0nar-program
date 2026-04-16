@@ -49,5 +49,11 @@ pub fn update(
         registry.paused = is_paused;
     }
 
+    emit!(crate::events::ConfigUpdated {
+        min_stake_lamports,
+        max_observers,
+        paused,
+    });
+
     Ok(())
 }
