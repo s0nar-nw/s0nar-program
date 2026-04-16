@@ -863,20 +863,12 @@ mod tests {
         assert!(health.health_score > 0, "latency=0 should yield good score");
         assert!(health.health_score <= 100, "score must not overflow");
 
-        // latency = very high → latency component = 0
+        // latency = very high → must fail
         advance_slot(&mut svm, 1);
-        submit_attestation(&mut svm, &obs, 100, 100, u32::MAX).unwrap();
-        let health = crate::state::NetworkHealthAccount::try_deserialize(
-            &mut svm
-                .get_account(&get_network_health_pda())
-                .unwrap()
-                .data
-                .as_ref(),
-        )
-        .unwrap();
+        let err = submit_attestation(&mut svm, &obs, 100, 100, u32::MAX);
         assert!(
-            health.health_score <= 100,
-            "extreme latency must not cause overflow"
+            err.is_err(),
+            "extreme latency must fail with InvalidLatencyValue"
         );
     }
 
@@ -891,8 +883,8 @@ mod tests {
         register_observer(&mut svm, &obs, crate::Region::US).unwrap();
 
         advance_slot(&mut svm, 1);
-        // Smallest valid: reachable=0, probed=1, latency=0
-        submit_attestation(&mut svm, &obs, 0, 1, 0).unwrap();
+        // Smallest valid: reachable=0, probed=10 (MIN_PROBE_COUNT), latency=0
+        submit_attestation(&mut svm, &obs, 0, 10, 0).unwrap();
 
         let oa = crate::state::ObserverAccount::try_deserialize(
             &mut svm

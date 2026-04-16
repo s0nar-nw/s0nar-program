@@ -6,8 +6,9 @@ use crate::{
         clear_region_aggregate, compute_avg_reach_latency, compute_health_score,
         count_active_regions, recompute_global_score, set_region_averages,
     },
-    Attestation, NetworkHealthAccount, ObserverAccount, RegistryAccount, NETWORK_HEALTH_SEED,
-    OBSERVER_SEED, REGISTRY_SEED, STALE_SLOTS,
+    Attestation, NetworkHealthAccount, ObserverAccount, RegistryAccount, MAX_RTT_US,
+    MAX_SLOT_LATENCY_MS, MIN_PROBE_COUNT, NETWORK_HEALTH_SEED, OBSERVER_SEED, REGISTRY_SEED,
+    STALE_SLOTS,
 };
 
 #[derive(Accounts)]
@@ -57,7 +58,10 @@ pub fn submit(
 ) -> Result<()> {
     let clock = &ctx.accounts.clock;
 
-    require!(tpu_probed > 0, CustomErrors::ZeroValidatorsProbed);
+    require!(
+        tpu_probed >= MIN_PROBE_COUNT,
+        CustomErrors::InsufficientValidatorsProbed
+    );
     require!(
         tpu_reachable <= tpu_probed,
         CustomErrors::InvalidReachabilityCount
@@ -65,6 +69,12 @@ pub fn submit(
     require!(
         clock.slot > ctx.accounts.observer_account.last_attestation_slot,
         CustomErrors::StaleAttestation
+    );
+    require!(avg_rtt_us <= MAX_RTT_US, CustomErrors::InvalidLatencyValue);
+    require!(p95_rtt_us <= MAX_RTT_US, CustomErrors::InvalidLatencyValue);
+    require!(
+        slot_latency_ms <= MAX_SLOT_LATENCY_MS,
+        CustomErrors::InvalidLatencyValue
     );
 
     let observer_account = &mut ctx.accounts.observer_account;

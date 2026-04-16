@@ -23,8 +23,14 @@ pub enum CustomErrors {
     #[msg("Zero validators probed")]
     ZeroValidatorsProbed,
 
+    #[msg("Insufficient validators probed")]
+    InsufficientValidatorsProbed,
+
     #[msg("Invalid reachability count")]
     InvalidReachabilityCount,
+
+    #[msg("Invalid latency submitted")]
+    InvalidLatencyValue,
 
     #[msg("Stale attestation")]
     StaleAttestation,
