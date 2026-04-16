@@ -67,7 +67,7 @@ pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u1
         active_region_count: 0,
         last_updated_slot: 0,
         last_updated_ts: 0,
-        // Initialize with worst possible value so first update always lowers it
+        // Initialize with u8::MAX (255) to represent "no data yet"
         min_health_ever: u8::MAX,
         max_health_ever: 0,
         total_attestations: 0,

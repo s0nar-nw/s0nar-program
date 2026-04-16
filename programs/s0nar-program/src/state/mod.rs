@@ -180,6 +180,7 @@ pub struct NetworkHealthAccount {
     pub last_updated_ts: i64,
 
     /// Lowest health score ever recorded
+    /// Note: Initialized to 255 (u8::MAX) which represents "no data yet".
     pub min_health_ever: u8,
     /// Highest health score ever recorded
     pub max_health_ever: u8,
