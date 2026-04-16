@@ -45,6 +45,7 @@ A region is considered stale if no attestation has been received in the last 150
 programs/s0nar-program/src/
 ├── lib.rs                      # entrypoint + instruction dispatch
 ├── error.rs                    # custom error codes
+├── events.rs                   # program events
 ├── utils.rs                    # score computation helpers (shared across instructions)
 ├── state/
 │   ├── mod.rs                  # all account structs + embedded types + seeds
@@ -56,7 +57,9 @@ programs/s0nar-program/src/
     ├── submit_attestation.rs
     ├── crank_aggregation.rs
     ├── deregister_observer.rs
-    └── slash_observer.rs
+    ├── slash_observer.rs
+    ├── update_config.rs
+    └── transfer_authority.rs
 ```
 
 ---
@@ -72,6 +75,8 @@ programs/s0nar-program/src/
 | `deregister_observer` | Observer or authority       | Returns escrowed stake, marks node inactive                 |
 | `slash_observer`      | Authority                   | Sends part of an observer's escrowed stake to a treasury    |
 | `update_config`       | Authority                   | Updates min stake, observer cap, and paused state           |
+| `propose_authority`   | Authority                   | Proposes a new authority for the registry                   |
+| `accept_authority`    | Pending Authority           | Accepts the authority handoff                               |
 
 ### `initialize`
 
@@ -101,6 +106,14 @@ Parameters: `slash_bps: u16`. Authority-only instruction that transfers a percen
 
 Parameters: `min_stake_lamports: Option<u64>`, `max_observers: Option<u16>`, `paused: Option<bool>`. Authority-only instruction for updating registry configuration, including pause/unpause.
 
+### `propose_authority`
+
+Parameters: `new_authority: Pubkey`. Authority-only instruction that sets the `pending_authority` field in the registry to prepare for a two-step authority handoff.
+
+### `accept_authority`
+
+No parameters. The caller must be the `pending_authority`. Completes the handoff by updating the registry's `authority` and clearing `pending_authority`.
+
 ---
 
 ## Accounts
@@ -125,6 +138,7 @@ Total rent depends on observer count and current account sizes.
 | Field                | Type     | Description                                        |
 | -------------------- | -------- | -------------------------------------------------- |
 | `authority`          | `Pubkey` | Admin key — can deregister any observer, pause     |
+| `pending_authority`  | `Option<Pubkey>`| Pending authority for two-step handoff      |
 | `min_stake_lamports` | `u64`    | Minimum stake required to register                 |
 | `observer_count`     | `u16`    | Total observers ever registered (never decrements) |
 | `active_count`       | `u16`    | Currently active observer count                    |
@@ -140,7 +154,8 @@ Total rent depends on observer count and current account sizes.
 | `health_score`          | `u8`               | Global health score 0–100                             |
 | `tpu_reachability_pct`  | `u8`               | Average TPU reachability % across active regions      |
 | `avg_slot_latency_ms`   | `u32`              | Average slot latency across active regions (ms)       |
-| `active_observer_count` | `u16`              | Number of non-stale regions contributing to the score |
+| `active_observer_count` | `u16`              | Number of active observers that contributed to this score |
+| `active_region_count`   | `u16`              | Number of non-stale regions contributing to the score |
 | `last_updated_slot`     | `u64`              | Slot of the last update — check for staleness         |
 | `last_updated_ts`       | `i64`              | Unix timestamp of the last update                     |
 | `min_health_ever`       | `u8`               | Lowest score ever recorded                            |
@@ -169,6 +184,19 @@ The `authority` set during `initialize` has these admin capabilities:
 - **Deregister any observer** — call `deregister_observer` with `caller = authority` to forcibly remove a misbehaving node and return its stake.
 - **Pause or unpause the registry** — call `update_config(..., paused = Some(true | false))` to halt or resume `register_observer`, `submit_attestation`, and `crank_aggregation`.
 - **Slash an observer** — call `slash_observer` to move a percentage of escrowed stake to a treasury account.
+- **Transfer authority** — perform a two-step handoff using `propose_authority` (called by current authority) and `accept_authority` (called by the new authority).
+
+---
+
+## Events
+
+The program emits the following events for indexing and off-chain monitoring:
+
+- `ObserverRegistered`: Emitted when an observer successfully registers and escrows stake.
+- `ObserverDeregistered`: Emitted when an observer leaves or is forcibly removed.
+- `ObserverSlashed`: Emitted when an observer's stake is slashed by the authority.
+- `AttestationSubmitted`: Emitted during `submit_attestation` with the observer's measurement, health score, and slot.
+- `ConfigUpdated`: Emitted when the registry configuration is updated by the authority.
 
 ---
 
