@@ -52,4 +52,7 @@ pub enum CustomErrors {
 
     #[msg("Invalid or no pending authority for registry")]
     InvalidPendingAuthority,
+
+    #[msg("Max observers cannot be less than active observers")]
+    MaxObserversCannotBeLessThanActiveObservers,
 }

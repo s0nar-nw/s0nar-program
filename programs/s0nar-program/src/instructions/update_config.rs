@@ -36,7 +36,12 @@ pub fn update(
     }
 
     if let Some(max_obs) = max_observers {
+        require!(
+            max_obs >= registry.active_count,
+            CustomErrors::MaxObserversCannotBeLessThanActiveObservers
+        );
         require!(max_obs > 0, CustomErrors::ValueCannotBeZero);
+
         registry.max_observers = max_obs;
     }
 
