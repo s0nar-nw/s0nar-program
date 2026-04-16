@@ -67,6 +67,14 @@ pub mod s0nar_program {
     ) -> Result<()> {
         update_config::update(ctx, min_stake_lamports, max_observers, paused)
     }
+
+    pub fn propose_authority(ctx: Context<ProposeAuthority>, new_authority: Pubkey) -> Result<()> {
+        transfer_authority::propose(ctx, new_authority)
+    }
+
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        transfer_authority::accept(ctx)
+    }
 }
 
 pub use crate::s0nar_program::*;

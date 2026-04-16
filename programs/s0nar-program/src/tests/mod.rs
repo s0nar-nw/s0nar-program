@@ -220,6 +220,37 @@ mod tests {
         send_tx(svm, &[ix], &[auth])
     }
 
+    fn propose_authority(
+        svm: &mut LiteSVM,
+        auth: &Keypair,
+        new_auth: &Pubkey,
+    ) -> Result<(), TransactionError> {
+        let ix = Instruction {
+            program_id: program_id(),
+            accounts: vec![
+                AccountMeta::new(get_registry_pda(), false),
+                AccountMeta::new_readonly(auth.pubkey(), true),
+            ],
+            data: crate::instruction::ProposeAuthority {
+                new_authority: anchor_lang::prelude::Pubkey::new_from_array(new_auth.to_bytes()),
+            }
+            .data(),
+        };
+        send_tx(svm, &[ix], &[auth])
+    }
+
+    fn accept_authority(svm: &mut LiteSVM, new_auth: &Keypair) -> Result<(), TransactionError> {
+        let ix = Instruction {
+            program_id: program_id(),
+            accounts: vec![
+                AccountMeta::new(get_registry_pda(), false),
+                AccountMeta::new_readonly(new_auth.pubkey(), true),
+            ],
+            data: crate::instruction::AcceptAuthority {}.data(),
+        };
+        send_tx(svm, &[ix], &[new_auth])
+    }
+
     fn advance_slot(svm: &mut LiteSVM, slots: u64) {
         let mut clock: SolanaClock = svm.get_sysvar::<SolanaClock>();
         clock.slot += slots;
@@ -1651,5 +1682,50 @@ mod tests {
             asia.reachability_pct, 85,
             "Asia reachability should be averaged"
         );
+    }
+
+    #[test]
+    fn test_transfer_authority() {
+        let (mut svm, auth) = setup();
+        init_protocol(&mut svm, &auth, 1, 10);
+
+        let new_auth = Keypair::new();
+        svm.airdrop(&new_auth.pubkey(), 10 * LAMPORTS_PER_SOL)
+            .unwrap();
+
+        propose_authority(&mut svm, &auth, &new_auth.pubkey()).unwrap();
+
+        let registry = crate::state::RegistryAccount::try_deserialize(
+            &mut svm.get_account(&get_registry_pda()).unwrap().data.as_ref(),
+        )
+        .unwrap();
+        assert_eq!(
+            registry.pending_authority,
+            Some(anchor_lang::prelude::Pubkey::new_from_array(
+                new_auth.pubkey().to_bytes()
+            ))
+        );
+
+        let random_user = Keypair::new();
+        svm.airdrop(&random_user.pubkey(), 10 * LAMPORTS_PER_SOL)
+            .unwrap();
+        let err2 = accept_authority(&mut svm, &random_user);
+        assert!(err2.is_err(), "non-pending authority must not accept");
+
+        accept_authority(&mut svm, &new_auth).unwrap();
+
+        let registry = crate::state::RegistryAccount::try_deserialize(
+            &mut svm.get_account(&get_registry_pda()).unwrap().data.as_ref(),
+        )
+        .unwrap();
+        assert_eq!(
+            registry.authority,
+            anchor_lang::prelude::Pubkey::new_from_array(new_auth.pubkey().to_bytes())
+        );
+        assert_eq!(registry.pending_authority, None);
+
+        let random_auth = Keypair::new();
+        let err = propose_authority(&mut svm, &auth, &random_auth.pubkey());
+        assert!(err.is_err(), "old authority must not propose");
     }
 }

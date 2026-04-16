@@ -9,6 +9,8 @@ pub const NETWORK_HEALTH_SEED: &[u8] = b"network_health";
 pub struct RegistryAccount {
     /// Admin key
     pub authority: Pubkey,
+    /// Pending authority for handoff
+    pub pending_authority: Option<Pubkey>,
     /// Minimum stake required to observe
     pub min_stake_lamports: u64,
     /// Number of observers
@@ -28,6 +30,7 @@ pub struct RegistryAccount {
 impl RegistryAccount {
     pub const LEN: usize = 8   // discriminator
         + 32                    // authority
+        + 33                    // pending_authority
         + 8                     // min_stake_lamports
         + 2                     // observer_count
         + 2                     // active_account

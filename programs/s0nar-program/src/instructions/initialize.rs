@@ -47,6 +47,7 @@ pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u1
 
     registry.set_inner(RegistryAccount {
         authority: ctx.accounts.authority.key(),
+        pending_authority: None,
         min_stake_lamports,
         observer_count: 0,
         active_count: 0,

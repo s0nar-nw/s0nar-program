@@ -49,4 +49,7 @@ pub enum CustomErrors {
 
     #[msg("Insufficient balance in PDA for slash")]
     InsufficientBalanceForSlash,
+
+    #[msg("Invalid or no pending authority for registry")]
+    InvalidPendingAuthority,
 }
