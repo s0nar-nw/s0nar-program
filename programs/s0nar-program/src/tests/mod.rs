@@ -1292,6 +1292,10 @@ mod tests {
         )
         .unwrap();
         assert_eq!(reg.active_count, 3);
+        assert_eq!(
+            reg.observer_count, 3,
+            "observer_count should decrement on deregister"
+        );
         assert!(
             reg.active_count <= reg.observer_count,
             "active <= total after deregister"

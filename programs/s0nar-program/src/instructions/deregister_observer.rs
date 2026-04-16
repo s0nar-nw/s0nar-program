@@ -65,6 +65,7 @@ pub fn deregister(ctx: Context<DeregisterObserver>) -> Result<()> {
     let registry = &mut ctx.accounts.registry;
 
     // Decrement registry counts
+    registry.observer_count = registry.observer_count.saturating_sub(1);
     registry.active_count = registry.active_count.saturating_sub(1);
 
     Ok(())
