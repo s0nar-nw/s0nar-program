@@ -2,12 +2,15 @@ use anchor_lang::prelude::*;
 
 use crate::error::CustomErrors;
 use crate::state::RegistryAccount;
+use crate::REGISTRY_SEED;
 
 #[derive(Accounts)]
 pub struct ProposeAuthority<'info> {
     // Global registry storing protocol configuration
     #[account(
         mut,
+        seeds = [REGISTRY_SEED],
+        bump = registry.bump,
         has_one = authority @ CustomErrors::UnAuthorizedCaller,
     )]
     pub registry: Account<'info, RegistryAccount>,
