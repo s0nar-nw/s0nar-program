@@ -128,6 +128,11 @@ mod tests {
                 avg_rtt_us: 1000,
                 p95_rtt_us: 2000,
                 slot_latency_ms: lat,
+                agave_count: 0,
+                firedancer_count: 0,
+                jito_count: 0,
+                solana_labs_count: 0,
+                other_count: 0,
             }
             .data(),
         };
@@ -135,6 +140,45 @@ mod tests {
     }
 
     /// Returns Ok if crank succeeded, Err if the transaction failed (e.g. NoActiveObservers).
+    #[allow(clippy::too_many_arguments)]
+    fn submit_attestation_with_clients(
+        svm: &mut LiteSVM,
+        obs: &Keypair,
+        reachable: u16,
+        probed: u16,
+        lat: u32,
+        agave: u16,
+        firedancer: u16,
+        jito: u16,
+        labs: u16,
+        other: u16,
+    ) -> Result<(), TransactionError> {
+        let ix = Instruction {
+            program_id: program_id(),
+            accounts: vec![
+                AccountMeta::new(obs.pubkey(), true),
+                AccountMeta::new(get_observer_pda(&obs.pubkey()), false),
+                AccountMeta::new(get_network_health_pda(), false),
+                AccountMeta::new_readonly(get_registry_pda(), false),
+                AccountMeta::new_readonly(clock_id(), false),
+            ],
+            data: crate::instruction::SubmitAttestation {
+                tpu_reachable: reachable,
+                tpu_probed: probed,
+                avg_rtt_us: 1000,
+                p95_rtt_us: 2000,
+                slot_latency_ms: lat,
+                agave_count: agave,
+                firedancer_count: firedancer,
+                jito_count: jito,
+                solana_labs_count: labs,
+                other_count: other,
+            }
+            .data(),
+        };
+        send_tx(svm, &[ix], &[obs])
+    }
+
     fn crank_aggregation(
         svm: &mut LiteSVM,
         payer: &Keypair,
@@ -1723,5 +1767,142 @@ mod tests {
         let random_auth = Keypair::new();
         let err = propose_authority(&mut svm, &auth, &random_auth.pubkey());
         assert!(err.is_err(), "old authority must not propose");
+    }
+
+    /// Single observer submits a known client mix.
+    /// Region averages must equal the submitted mix (count=1 → avg=value).
+    #[test]
+    fn test_client_distribution_region_average() {
+        let (mut svm, authority) = setup();
+        init_protocol(&mut svm, &authority, 1, 10);
+
+        let obs = Keypair::new();
+        svm.airdrop(&obs.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        register_observer(&mut svm, &obs, crate::Region::Asia).unwrap();
+
+        advance_slot(&mut svm, 1);
+
+        // mix: agave=50, fd=30, jito=10, labs=5, other=5
+        submit_attestation_with_clients(&mut svm, &obs, 90, 100, 200, 50, 30, 10, 5, 5).unwrap();
+
+        let health = crate::state::NetworkHealthAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_network_health_pda())
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        let asia = health
+            .region_scores
+            .iter()
+            .find(|rs| rs.region == crate::Region::Asia)
+            .expect("asia slot");
+
+        assert_eq!(asia.observer_count, 1);
+        assert_eq!(asia.agave_count, 50);
+        assert_eq!(asia.firedancer_count, 30);
+        assert_eq!(asia.jito_count, 10);
+        assert_eq!(asia.solana_labs_count, 5);
+        assert_eq!(asia.other_count, 5);
+    }
+
+    /// Same observer submits twice with different mixes.
+    /// Region totals must reflect only the latest, not the sum.
+    #[test]
+    fn test_client_distribution_subtract_on_resubmit() {
+        let (mut svm, authority) = setup();
+        init_protocol(&mut svm, &authority, 1, 10);
+
+        let obs = Keypair::new();
+        svm.airdrop(&obs.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        register_observer(&mut svm, &obs, crate::Region::EU).unwrap();
+
+        advance_slot(&mut svm, 1);
+        submit_attestation_with_clients(&mut svm, &obs, 90, 100, 200, 80, 10, 5, 3, 2).unwrap();
+
+        advance_slot(&mut svm, 1);
+        // resubmit with different mix
+        submit_attestation_with_clients(&mut svm, &obs, 95, 100, 180, 40, 40, 10, 5, 5).unwrap();
+
+        let health = crate::state::NetworkHealthAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_network_health_pda())
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        let eu = health
+            .region_scores
+            .iter()
+            .find(|rs| rs.region == crate::Region::EU)
+            .expect("eu slot");
+
+        assert_eq!(eu.observer_count, 1, "still 1 observer, not 2");
+        // averages = totals / 1 → equal to latest mix
+        assert_eq!(eu.agave_count, 40);
+        assert_eq!(eu.firedancer_count, 40);
+        assert_eq!(eu.jito_count, 10);
+        assert_eq!(eu.solana_labs_count, 5);
+        assert_eq!(eu.other_count, 5);
+        // running totals must also equal the latest, not first+second
+        assert_eq!(eu.total_agave_count, 40);
+        assert_eq!(eu.total_firedancer_count, 40);
+    }
+
+    /// 2 observers in 2 regions with different mixes.
+    /// Global pcts must equal average of region averages.
+    #[test]
+    fn test_client_distribution_global_pct() {
+        let (mut svm, authority) = setup();
+        init_protocol(&mut svm, &authority, 1, 10);
+
+        let obs1 = Keypair::new();
+        let obs2 = Keypair::new();
+        svm.airdrop(&obs1.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&obs2.pubkey(), 10 * LAMPORTS_PER_SOL).unwrap();
+
+        register_observer(&mut svm, &obs1, crate::Region::Asia).unwrap();
+        register_observer(&mut svm, &obs2, crate::Region::US).unwrap();
+
+        advance_slot(&mut svm, 1);
+
+        // Asia: agave=60 fd=20 jito=10 labs=5 other=5
+        submit_attestation_with_clients(&mut svm, &obs1, 90, 100, 200, 60, 20, 10, 5, 5).unwrap();
+        // US:   agave=40 fd=40 jito=10 labs=5 other=5
+        submit_attestation_with_clients(&mut svm, &obs2, 95, 100, 180, 40, 40, 10, 5, 5).unwrap();
+
+        let health = crate::state::NetworkHealthAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_network_health_pda())
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+
+        // global avg = (asia_avg + us_avg) / 2
+        assert_eq!(health.agave_pct, (60 + 40) / 2);
+        assert_eq!(health.firedancer_pct, (20 + 40) / 2);
+        assert_eq!(health.jito_pct, (10 + 10) / 2);
+        assert_eq!(health.solana_labs_pct, (5 + 5) / 2);
+        assert_eq!(health.other_pct, (5 + 5) / 2);
+
+        // crank should produce same result
+        crank_aggregation(&mut svm, &authority, &[obs1.pubkey(), obs2.pubkey()]).unwrap();
+
+        let health = crate::state::NetworkHealthAccount::try_deserialize(
+            &mut svm
+                .get_account(&get_network_health_pda())
+                .unwrap()
+                .data
+                .as_ref(),
+        )
+        .unwrap();
+        assert_eq!(health.agave_pct, 50);
+        assert_eq!(health.firedancer_pct, 30);
     }
 }
