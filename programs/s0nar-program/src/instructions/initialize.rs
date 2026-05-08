@@ -101,6 +101,11 @@ pub fn init(ctx: Context<Initialize>, min_stake_lamports: u64, max_observers: u1
                 ..Default::default()
             },
         ],
+        agave_pct: 0,
+        firedancer_pct: 0,
+        jito_pct: 0,
+        solana_labs_pct: 0,
+        other_pct: 0,
         bump: ctx.bumps.network_health,
     });
 

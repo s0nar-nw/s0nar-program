@@ -3,8 +3,8 @@ use anchor_lang::prelude::*;
 use crate::{
     error::CustomErrors,
     utils::{
-        clear_region_aggregate, compute_avg_reach_latency, compute_health_score,
-        count_active_regions, recompute_global_score, set_region_averages,
+        clear_region_aggregate, compute_avg_client_diversity, compute_avg_reach_latency,
+        compute_health_score, count_active_regions, recompute_global_score, set_region_averages,
     },
     Attestation, NetworkHealthAccount, ObserverAccount, RegistryAccount, MAX_RTT_US,
     MAX_SLOT_LATENCY_MS, MIN_PROBE_COUNT, NETWORK_HEALTH_SEED, OBSERVER_SEED, REGISTRY_SEED,
@@ -55,6 +55,11 @@ pub fn submit(
     avg_rtt_us: u32,
     p95_rtt_us: u32,
     slot_latency_ms: u32,
+    agave_count: u16,
+    firedancer_count: u16,
+    jito_count: u16,
+    solana_labs_count: u16,
+    other_count: u16,
 ) -> Result<()> {
     let clock = &ctx.accounts.clock;
 
@@ -93,6 +98,11 @@ pub fn submit(
         slot_latency_ms,
         tpu_reachable,
         tpu_probed,
+        agave_count,
+        firedancer_count,
+        jito_count,
+        solana_labs_count,
+        other_count,
     };
 
     // Update the observer account
@@ -136,6 +146,21 @@ pub fn submit(
                 rs.total_slot_latency_ms = rs
                     .total_slot_latency_ms
                     .saturating_sub(previous_attestation.slot_latency_ms as u64);
+                rs.total_agave_count = rs
+                    .total_agave_count
+                    .saturating_sub(previous_attestation.agave_count as u32);
+                rs.total_firedancer_count = rs
+                    .total_firedancer_count
+                    .saturating_sub(previous_attestation.firedancer_count as u32);
+                rs.total_jito_count = rs
+                    .total_jito_count
+                    .saturating_sub(previous_attestation.jito_count as u32);
+                rs.total_solana_labs_count = rs
+                    .total_solana_labs_count
+                    .saturating_sub(previous_attestation.solana_labs_count as u32);
+                rs.total_other_count = rs
+                    .total_other_count
+                    .saturating_sub(previous_attestation.other_count as u32);
             } else {
                 rs.observer_count = rs.observer_count.saturating_add(1);
             }
@@ -148,6 +173,15 @@ pub fn submit(
             rs.total_slot_latency_ms = rs
                 .total_slot_latency_ms
                 .saturating_add(slot_latency_ms as u64);
+            rs.total_agave_count = rs.total_agave_count.saturating_add(agave_count as u32);
+            rs.total_firedancer_count = rs
+                .total_firedancer_count
+                .saturating_add(firedancer_count as u32);
+            rs.total_jito_count = rs.total_jito_count.saturating_add(jito_count as u32);
+            rs.total_solana_labs_count = rs
+                .total_solana_labs_count
+                .saturating_add(solana_labs_count as u32);
+            rs.total_other_count = rs.total_other_count.saturating_add(other_count as u32);
             rs.last_updated_slot = clock.slot;
             set_region_averages(rs);
             break;
@@ -181,13 +215,27 @@ pub fn submit(
     network_health.tpu_reachability_pct = avg_reach;
     network_health.avg_slot_latency_ms = avg_latency;
 
+    // global client distribution
+    let (agave_p, fd_p, jito_p, labs_p, other_p) =
+        compute_avg_client_diversity(network_health, clock.slot);
+    network_health.agave_pct = agave_p;
+    network_health.firedancer_pct = fd_p;
+    network_health.jito_pct = jito_p;
+    network_health.solana_labs_pct = labs_p;
+    network_health.other_pct = other_p;
+
     msg!(
-        "Attestation submitted: region={:?} score={} reachability={}% latency={}ms slot={}",
+        "Attestation: region={:?} score={} reach={}% latency={}ms slot={} clients=agave:{} fd:{} jito:{} labs:{} other:{}",
         region,
         observer_score,
         reachability_pct,
         slot_latency_ms,
         clock.slot,
+        agave_count,
+        firedancer_count,
+        jito_count,
+        solana_labs_count,
+        other_count,
     );
 
     emit!(crate::events::AttestationSubmitted {
@@ -197,6 +245,11 @@ pub fn submit(
         reachability_pct,
         slot_latency_ms,
         slot: clock.slot,
+        agave_count,
+        firedancer_count,
+        jito_count,
+        solana_labs_count,
+        other_count,
     });
 
     Ok(())

@@ -38,6 +38,11 @@ pub mod s0nar_program {
         avg_rtt_us: u32,
         p95_rtt_us: u32,
         slot_latency_ms: u32,
+        agave_count: u16,
+        firedancer_count: u16,
+        jito_count: u16,
+        solana_labs_count: u16,
+        other_count: u16,
     ) -> Result<()> {
         submit_attestation::submit(
             ctx,
@@ -46,6 +51,11 @@ pub mod s0nar_program {
             avg_rtt_us,
             p95_rtt_us,
             slot_latency_ms,
+            agave_count,
+            firedancer_count,
+            jito_count,
+            solana_labs_count,
+            other_count,
         )
     }
 

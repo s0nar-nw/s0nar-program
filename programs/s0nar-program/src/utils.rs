@@ -93,6 +93,11 @@ pub fn set_region_averages(region_score: &mut RegionScore) {
         region_score.reachability_pct = 0;
         region_score.avg_rtt_us = 0;
         region_score.slot_latency_ms = 0;
+        region_score.agave_count = 0;
+        region_score.firedancer_count = 0;
+        region_score.jito_count = 0;
+        region_score.solana_labs_count = 0;
+        region_score.other_count = 0;
         return;
     }
 
@@ -114,6 +119,26 @@ pub fn set_region_averages(region_score: &mut RegionScore) {
         .total_slot_latency_ms
         .checked_div(count as u64)
         .unwrap_or(0) as u32;
+    region_score.agave_count = region_score
+        .total_agave_count
+        .checked_div(count)
+        .unwrap_or(0) as u16;
+    region_score.firedancer_count = region_score
+        .total_firedancer_count
+        .checked_div(count)
+        .unwrap_or(0) as u16;
+    region_score.jito_count = region_score
+        .total_jito_count
+        .checked_div(count)
+        .unwrap_or(0) as u16;
+    region_score.solana_labs_count = region_score
+        .total_solana_labs_count
+        .checked_div(count)
+        .unwrap_or(0) as u16;
+    region_score.other_count = region_score
+        .total_other_count
+        .checked_div(count)
+        .unwrap_or(0) as u16;
 }
 
 pub fn clear_region_aggregate(region_score: &mut RegionScore) {
@@ -122,5 +147,48 @@ pub fn clear_region_aggregate(region_score: &mut RegionScore) {
     region_score.total_reachability_pct = 0;
     region_score.total_avg_rtt_us = 0;
     region_score.total_slot_latency_ms = 0;
+    region_score.total_agave_count = 0;
+    region_score.total_firedancer_count = 0;
+    region_score.total_jito_count = 0;
+    region_score.total_solana_labs_count = 0;
+    region_score.total_other_count = 0;
     set_region_averages(region_score);
+}
+
+/// Computes global client distribution percentages across all fresh active regions.
+/// Returns (agave_pct, firedancer_pct, jito_pct, solana_labs_pct, other_pct).
+pub fn compute_avg_client_diversity(
+    health: &NetworkHealthAccount,
+    current_slot: u64,
+) -> (u8, u8, u8, u8, u8) {
+    let mut agave_sum = 0u32;
+    let mut fd_sum = 0u32;
+    let mut jito_sum = 0u32;
+    let mut labs_sum = 0u32;
+    let mut other_sum = 0u32;
+    let mut count = 0u32;
+
+    for rs in health.region_scores.iter() {
+        if rs.observer_count > 0 && current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS
+        {
+            agave_sum += rs.agave_count as u32;
+            fd_sum += rs.firedancer_count as u32;
+            jito_sum += rs.jito_count as u32;
+            labs_sum += rs.solana_labs_count as u32;
+            other_sum += rs.other_count as u32;
+            count += 1;
+        }
+    }
+
+    if count == 0 {
+        return (0, 0, 0, 0, 0);
+    }
+
+    (
+        agave_sum.checked_div(count).unwrap_or(0) as u8,
+        fd_sum.checked_div(count).unwrap_or(0) as u8,
+        jito_sum.checked_div(count).unwrap_or(0) as u8,
+        labs_sum.checked_div(count).unwrap_or(0) as u8,
+        other_sum.checked_div(count).unwrap_or(0) as u8,
+    )
 }

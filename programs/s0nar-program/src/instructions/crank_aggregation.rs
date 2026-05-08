@@ -3,8 +3,8 @@ use anchor_lang::prelude::*;
 use crate::{
     error::CustomErrors,
     utils::{
-        clear_region_aggregate, compute_avg_reach_latency, compute_health_score,
-        count_active_regions, recompute_global_score, set_region_averages,
+        clear_region_aggregate, compute_avg_client_diversity, compute_avg_reach_latency,
+        compute_health_score, count_active_regions, recompute_global_score, set_region_averages,
     },
     NetworkHealthAccount, ObserverAccount, Region, RegistryAccount, NETWORK_HEALTH_SEED,
     REGISTRY_SEED, STALE_SLOTS,
@@ -48,6 +48,12 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
         avg_rtt_us: u32,
         slot_latency_ms: u32,
         attestation_slot: u64,
+        /// Client distributions
+        agave_count: u16,
+        firedancer_count: u16,
+        jito_count: u16,
+        solana_labs_count: u16,
+        other_count: u16,
     }
 
     let mut snapshots: Vec<ObserverSnapshot> = Vec::new();
@@ -88,6 +94,11 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
             avg_rtt_us: att.avg_rtt_us,
             slot_latency_ms: att.slot_latency_ms,
             attestation_slot: att.slot,
+            agave_count: att.agave_count,
+            firedancer_count: att.firedancer_count,
+            jito_count: att.jito_count,
+            solana_labs_count: att.solana_labs_count,
+            other_count: att.other_count,
         });
     }
 
@@ -112,6 +123,15 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
                 rs.total_slot_latency_ms = rs
                     .total_slot_latency_ms
                     .saturating_add(snap.slot_latency_ms as u64);
+                rs.total_agave_count = rs.total_agave_count.saturating_add(snap.agave_count as u32);
+                rs.total_firedancer_count = rs
+                    .total_firedancer_count
+                    .saturating_add(snap.firedancer_count as u32);
+                rs.total_jito_count = rs.total_jito_count.saturating_add(snap.jito_count as u32);
+                rs.total_solana_labs_count = rs
+                    .total_solana_labs_count
+                    .saturating_add(snap.solana_labs_count as u32);
+                rs.total_other_count = rs.total_other_count.saturating_add(snap.other_count as u32);
                 rs.last_updated_slot = rs.last_updated_slot.max(snap.attestation_slot);
                 set_region_averages(rs);
                 break;
@@ -134,6 +154,15 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
     network_health.active_observer_count = snapshots.len() as u16;
     network_health.last_updated_slot = current_slot;
     network_health.last_updated_ts = clock.unix_timestamp;
+
+    // global client distribution
+    let (agave_p, fd_p, jito_p, labs_p, other_p) =
+        compute_avg_client_diversity(network_health, current_slot);
+    network_health.agave_pct = agave_p;
+    network_health.firedancer_pct = fd_p;
+    network_health.jito_pct = jito_p;
+    network_health.solana_labs_pct = labs_p;
+    network_health.other_pct = other_p;
 
     if global_score < network_health.min_health_ever {
         network_health.min_health_ever = global_score;

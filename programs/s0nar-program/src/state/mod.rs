@@ -58,6 +58,12 @@ pub struct Attestation {
     pub tpu_reachable: u16,
     /// Total validators probed this round
     pub tpu_probed: u16,
+    /// Client distributions
+    pub agave_count: u16,
+    pub firedancer_count: u16,
+    pub jito_count: u16,
+    pub solana_labs_count: u16,
+    pub other_count: u16,
 }
 
 impl Attestation {
@@ -67,7 +73,12 @@ impl Attestation {
         + 4                     // p95_rtt_us
         + 4                     // slot_latency_ms
         + 2                     // tpu_reachable
-        + 2; // tpu_probed
+        + 2                     // tpu_probed
+        + 2                     // agave_count
+        + 2                     // firedancer_count
+        + 2                     // jito_count
+        + 2                     // solana_labs_count
+        + 2; // other_count
 }
 /// Geographic region of an observer node - serializes as u8 on-chain
 #[derive(Default, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
@@ -114,10 +125,10 @@ impl ObserverAccount {
         + 8                             // registered_at
         + 8                             // last_attestation_slot
         + 8                             // attestation_count
-        + Attestation::LEN              // latest_attestation (32)
+        + Attestation::LEN              // latest_attestation (42)
         + 1                             // is_active
         + 1                             // bump
-        + 21; // padding
+        + 11; // padding
 }
 
 /// Health snapshot for one geographic region - embedded in NetworkHealthAccount
@@ -155,10 +166,36 @@ pub struct RegionScore {
 
     /// Running total of slot latency values for observers in this region
     pub total_slot_latency_ms: u64,
+
+    /// Client distribution counts for this region
+    pub agave_count: u16,
+    pub firedancer_count: u16,
+    pub jito_count: u16,
+    pub solana_labs_count: u16,
+    pub other_count: u16,
+
+    /// Running totals
+    pub total_agave_count: u32,
+    pub total_firedancer_count: u32,
+    pub total_jito_count: u32,
+    pub total_solana_labs_count: u32,
+    pub total_other_count: u32,
 }
 
 impl RegionScore {
-    pub const LEN: usize = 1 + 2 + 1 + 1 + 4 + 4 + 8 + 4 + 4 + 8 + 8;
+    pub const LEN: usize = 1     // region
+        + 2                      // observer_count
+        + 1                      // health_score
+        + 1                      // reachability_pct
+        + 4                      // avg_rtt_us
+        + 4                      // slot_latency_ms
+        + 8                      // last_updated_slot
+        + 4                      // total_health_score
+        + 4                      // total_reachability_pct
+        + 8                      // total_avg_rtt_us
+        + 8                      // total_slot_latency_ms
+        + (2 * 5)                // agave/firedancer/jito/labs/other display (u16 × 5)
+        + (4 * 5); // totals (u32 × 5)
 }
 
 /// Global oracle account - the single source of truth for dApps and UI reads
@@ -190,6 +227,13 @@ pub struct NetworkHealthAccount {
     /// One entry per region
     pub region_scores: [RegionScore; 7],
 
+    // global client distribution across all active regions
+    pub agave_pct: u8,
+    pub firedancer_pct: u8,
+    pub jito_pct: u8,
+    pub solana_labs_pct: u8,
+    pub other_pct: u8,
+
     /// PDA bump seed
     pub bump: u8,
 }
@@ -197,7 +241,7 @@ pub struct NetworkHealthAccount {
 impl NetworkHealthAccount {
     pub const REGION_COUNT: usize = 7;
 
-    pub const LEN: usize = 8           // discriminator
+    pub const LEN: usize = 8            // discriminator
         + 1                             // health_score
         + 1                             // tpu_reachability_pct
         + 4                             // avg_slot_latency_ms
@@ -208,7 +252,8 @@ impl NetworkHealthAccount {
         + 1                             // min_health_ever
         + 1                             // max_health_ever
         + 8                             // total_attestations
-        + (Self::REGION_COUNT * RegionScore::LEN)
+        + (Self::REGION_COUNT * RegionScore::LEN) // 7 × 75 = 525
+        + 5                             // agave/firedancer/jito/labs/other pct (u8 × 5)
         + 1                             // bump
-        + 27; // padding
+        + 22; // padding
 }
