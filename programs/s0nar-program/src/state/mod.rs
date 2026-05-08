@@ -64,6 +64,8 @@ pub struct Attestation {
     pub jito_count: u16,
     pub solana_labs_count: u16,
     pub other_count: u16,
+    /// % of total stake (by lamports) reachable via QUIC probe
+    pub reachable_stake_pct: u8,
 }
 
 impl Attestation {
@@ -78,7 +80,8 @@ impl Attestation {
         + 2                     // firedancer_count
         + 2                     // jito_count
         + 2                     // solana_labs_count
-        + 2; // other_count
+        + 2                     // other_count
+        + 1; // reachable_stake_pct
 }
 /// Geographic region of an observer node - serializes as u8 on-chain
 #[derive(Default, AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
@@ -125,10 +128,10 @@ impl ObserverAccount {
         + 8                             // registered_at
         + 8                             // last_attestation_slot
         + 8                             // attestation_count
-        + Attestation::LEN              // latest_attestation (42)
+        + Attestation::LEN              // latest_attestation (43)
         + 1                             // is_active
         + 1                             // bump
-        + 11; // padding
+        + 10; // padding
 }
 
 /// Health snapshot for one geographic region - embedded in NetworkHealthAccount
@@ -180,6 +183,10 @@ pub struct RegionScore {
     pub total_jito_count: u32,
     pub total_solana_labs_count: u32,
     pub total_other_count: u32,
+
+    /// Stake-weighted reachability for this region
+    pub reachable_stake_pct: u8,
+    pub total_reachable_stake_pct: u32,
 }
 
 impl RegionScore {
@@ -195,7 +202,9 @@ impl RegionScore {
         + 8                      // total_avg_rtt_us
         + 8                      // total_slot_latency_ms
         + (2 * 5)                // agave/firedancer/jito/labs/other display (u16 × 5)
-        + (4 * 5); // totals (u32 × 5)
+        + (4 * 5)                // totals (u32 × 5)
+        + 1                      // reachable_stake_pct
+        + 4; // total_reachable_stake_pct
 }
 
 /// Global oracle account - the single source of truth for dApps and UI reads

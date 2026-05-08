@@ -60,7 +60,12 @@ pub fn submit(
     jito_count: u16,
     solana_labs_count: u16,
     other_count: u16,
+    reachable_stake_pct: u8,
 ) -> Result<()> {
+    require!(
+        reachable_stake_pct <= 100,
+        CustomErrors::InvalidReachabilityCount
+    );
     let clock = &ctx.accounts.clock;
 
     require!(
@@ -103,6 +108,7 @@ pub fn submit(
         jito_count,
         solana_labs_count,
         other_count,
+        reachable_stake_pct,
     };
 
     // Update the observer account
@@ -161,6 +167,9 @@ pub fn submit(
                 rs.total_other_count = rs
                     .total_other_count
                     .saturating_sub(previous_attestation.other_count as u32);
+                rs.total_reachable_stake_pct = rs
+                    .total_reachable_stake_pct
+                    .saturating_sub(previous_attestation.reachable_stake_pct as u32);
             } else {
                 rs.observer_count = rs.observer_count.saturating_add(1);
             }
@@ -182,6 +191,9 @@ pub fn submit(
                 .total_solana_labs_count
                 .saturating_add(solana_labs_count as u32);
             rs.total_other_count = rs.total_other_count.saturating_add(other_count as u32);
+            rs.total_reachable_stake_pct = rs
+                .total_reachable_stake_pct
+                .saturating_add(reachable_stake_pct as u32);
             rs.last_updated_slot = clock.slot;
             set_region_averages(rs);
             break;
@@ -225,10 +237,11 @@ pub fn submit(
     network_health.other_pct = other_p;
 
     msg!(
-        "Attestation: region={:?} score={} reach={}% latency={}ms slot={} clients=agave:{} fd:{} jito:{} labs:{} other:{}",
+        "Attestation: region={:?} score={} reach={}% stake_reach={}% latency={}ms slot={} clients=agave:{} fd:{} jito:{} labs:{} other:{}",
         region,
         observer_score,
         reachability_pct,
+        reachable_stake_pct,
         slot_latency_ms,
         clock.slot,
         agave_count,
@@ -250,6 +263,7 @@ pub fn submit(
         jito_count,
         solana_labs_count,
         other_count,
+        reachable_stake_pct,
     });
 
     Ok(())

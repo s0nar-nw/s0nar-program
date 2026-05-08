@@ -54,6 +54,8 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
         jito_count: u16,
         solana_labs_count: u16,
         other_count: u16,
+        /// Stake-weighted reachability
+        reachable_stake_pct: u8,
     }
 
     let mut snapshots: Vec<ObserverSnapshot> = Vec::new();
@@ -99,6 +101,7 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
             jito_count: att.jito_count,
             solana_labs_count: att.solana_labs_count,
             other_count: att.other_count,
+            reachable_stake_pct: att.reachable_stake_pct,
         });
     }
 
@@ -132,6 +135,9 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
                     .total_solana_labs_count
                     .saturating_add(snap.solana_labs_count as u32);
                 rs.total_other_count = rs.total_other_count.saturating_add(snap.other_count as u32);
+                rs.total_reachable_stake_pct = rs
+                    .total_reachable_stake_pct
+                    .saturating_add(snap.reachable_stake_pct as u32);
                 rs.last_updated_slot = rs.last_updated_slot.max(snap.attestation_slot);
                 set_region_averages(rs);
                 break;
@@ -171,11 +177,24 @@ pub fn crank(ctx: Context<CrankAggregation>) -> Result<()> {
         network_health.max_health_ever = global_score;
     }
 
+    let stake_reach_avg = network_health
+        .region_scores
+        .iter()
+        .filter(|rs| {
+            rs.observer_count > 0
+                && current_slot.saturating_sub(rs.last_updated_slot) <= STALE_SLOTS
+        })
+        .map(|rs| rs.reachable_stake_pct as u32)
+        .sum::<u32>()
+        .checked_div(active_region_count as u32)
+        .unwrap_or(0) as u8;
+
     msg!(
-        "Crank: score={} reach={}% latency={}ms active_observers={} active_regions={} slot={}",
+        "Crank: score={} reach={}% latency={}ms stake_reach_avg={}% active_observers={} active_regions={} slot={}",
         global_score,
         avg_reach,
         avg_latency,
+        stake_reach_avg,
         snapshots.len(),
         active_region_count,
         current_slot,

@@ -15,6 +15,7 @@ pub struct AttestationSubmitted {
     pub jito_count: u16,
     pub solana_labs_count: u16,
     pub other_count: u16,
+    pub reachable_stake_pct: u8,
 }
 
 #[event]

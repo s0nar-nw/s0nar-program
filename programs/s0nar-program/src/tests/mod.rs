@@ -133,6 +133,7 @@ mod tests {
                 jito_count: 0,
                 solana_labs_count: 0,
                 other_count: 0,
+                reachable_stake_pct: 0,
             }
             .data(),
         };
@@ -173,6 +174,7 @@ mod tests {
                 jito_count: jito,
                 solana_labs_count: labs,
                 other_count: other,
+                reachable_stake_pct: 0,
             }
             .data(),
         };

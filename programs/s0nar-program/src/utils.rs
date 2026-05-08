@@ -98,6 +98,7 @@ pub fn set_region_averages(region_score: &mut RegionScore) {
         region_score.jito_count = 0;
         region_score.solana_labs_count = 0;
         region_score.other_count = 0;
+        region_score.reachable_stake_pct = 0;
         return;
     }
 
@@ -139,6 +140,10 @@ pub fn set_region_averages(region_score: &mut RegionScore) {
         .total_other_count
         .checked_div(count)
         .unwrap_or(0) as u16;
+    region_score.reachable_stake_pct = region_score
+        .total_reachable_stake_pct
+        .checked_div(count)
+        .unwrap_or(0) as u8;
 }
 
 pub fn clear_region_aggregate(region_score: &mut RegionScore) {
@@ -152,6 +157,7 @@ pub fn clear_region_aggregate(region_score: &mut RegionScore) {
     region_score.total_jito_count = 0;
     region_score.total_solana_labs_count = 0;
     region_score.total_other_count = 0;
+    region_score.total_reachable_stake_pct = 0;
     set_region_averages(region_score);
 }
 

@@ -43,6 +43,7 @@ pub mod s0nar_program {
         jito_count: u16,
         solana_labs_count: u16,
         other_count: u16,
+        reachable_stake_pct: u8,
     ) -> Result<()> {
         submit_attestation::submit(
             ctx,
@@ -56,6 +57,7 @@ pub mod s0nar_program {
             jito_count,
             solana_labs_count,
             other_count,
+            reachable_stake_pct,
         )
     }
 
