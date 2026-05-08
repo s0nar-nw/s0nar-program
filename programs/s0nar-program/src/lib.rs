@@ -13,7 +13,7 @@ pub use events::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("9eqgnuLZP5vMnxU27vZVcrhoSkf3PhhVECRKbb8P8fNQ");
+declare_id!("DcVVV9W4CtitVvRD7Jf8ptG24Lh9qte4g6tUkwu4t16a");
 
 #[program]
 pub mod s0nar_program {
