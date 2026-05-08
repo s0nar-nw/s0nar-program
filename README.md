@@ -88,7 +88,7 @@ Parameters: `region: Region` (`Asia | US | EU | SouthAmerica | Africa | Oceania 
 
 ### `submit_attestation`
 
-Parameters: `tpu_reachable: u16`, `tpu_probed: u16`, `avg_rtt_us: u32`, `p95_rtt_us: u32`, `slot_latency_ms: u32`. Writes the measurement to the observer's account and immediately recomputes the global `NetworkHealthAccount`. Requires an active, non-paused registry. Rejects attestations for the same slot twice.
+Parameters: `tpu_reachable: u16`, `tpu_probed: u16`, `avg_rtt_us: u32`, `p95_rtt_us: u32`, `slot_latency_ms: u32`, `agave_count: u16`, `firedancer_count: u16`, `jito_count: u16`, `solana_labs_count: u16`, `other_count: u16`, `reachable_stake_pct: u8`. Writes the measurement to the observer's account and immediately recomputes the global `NetworkHealthAccount`. Requires an active, non-paused registry. Rejects attestations for the same slot twice. `reachable_stake_pct` must be ≤ 100.
 
 ### `crank_aggregation`
 
@@ -122,58 +122,70 @@ No parameters. The caller must be the `pending_authority`. Completes the handoff
 | ---------------------- | ----------------------- | ---- | ------------------------------------------------------ |
 | `RegistryAccount`      | `[b"registry"]`         | 65B  | Global config — authority, stake params, observer cap  |
 | `ObserverAccount`      | `[b"observer", pubkey]` | 128B | Per-observer state — region, stake, latest attestation |
-| `NetworkHealthAccount` | `[b"network_health"]`   | 205B | Oracle — health score and per-region breakdown         |
+| `NetworkHealthAccount` | `[b"network_health"]`   | 632B | Oracle — health score and per-region breakdown         |
 
 **Embedded structs (packed inside accounts above, not standalone):**
 
 | Struct        | Size | Lives In                                |
 | ------------- | ---- | --------------------------------------- |
-| `Attestation` | 32B  | `ObserverAccount.latest_attestation`    |
-| `RegionScore` | 19B  | `NetworkHealthAccount.region_scores[7]` |
+| `Attestation` | 43B  | `ObserverAccount.latest_attestation`    |
+| `RegionScore` | 80B  | `NetworkHealthAccount.region_scores[7]` |
 
 Total rent depends on observer count and current account sizes.
 
 ### `RegistryAccount` fields
 
-| Field                | Type     | Description                                        |
-| -------------------- | -------- | -------------------------------------------------- |
-| `authority`          | `Pubkey` | Admin key — can deregister any observer, pause     |
-| `pending_authority`  | `Option<Pubkey>`| Pending authority for two-step handoff      |
-| `min_stake_lamports` | `u64`    | Minimum stake required to register                 |
-| `observer_count`     | `u16`    | Total observers ever registered (never decrements) |
-| `active_count`       | `u16`    | Currently active observer count                    |
-| `max_observers`      | `u16`    | Hard cap on concurrent observers                   |
-| `paused`             | `bool`   | When true, blocks register/submit/crank            |
-| `version`            | `u8`     | Schema version (currently 1)                       |
-| `bump`               | `u8`     | PDA bump seed                                      |
+| Field                | Type             | Description                                        |
+| -------------------- | ---------------- | -------------------------------------------------- |
+| `authority`          | `Pubkey`         | Admin key — can deregister any observer, pause     |
+| `pending_authority`  | `Option<Pubkey>` | Pending authority for two-step handoff             |
+| `min_stake_lamports` | `u64`            | Minimum stake required to register                 |
+| `observer_count`     | `u16`            | Total observers ever registered (never decrements) |
+| `active_count`       | `u16`            | Currently active observer count                    |
+| `max_observers`      | `u16`            | Hard cap on concurrent observers                   |
+| `paused`             | `bool`           | When true, blocks register/submit/crank            |
+| `version`            | `u8`             | Schema version (currently 1)                       |
+| `bump`               | `u8`             | PDA bump seed                                      |
 
 ### `NetworkHealthAccount` fields
 
-| Field                   | Type               | Description                                           |
-| ----------------------- | ------------------ | ----------------------------------------------------- |
-| `health_score`          | `u8`               | Global health score 0–100                             |
-| `tpu_reachability_pct`  | `u8`               | Average TPU reachability % across active regions      |
-| `avg_slot_latency_ms`   | `u32`              | Average slot latency across active regions (ms)       |
+| Field                   | Type               | Description                                               |
+| ----------------------- | ------------------ | --------------------------------------------------------- |
+| `health_score`          | `u8`               | Global health score 0–100                                 |
+| `tpu_reachability_pct`  | `u8`               | Average TPU reachability % across active regions          |
+| `avg_slot_latency_ms`   | `u32`              | Average slot latency across active regions (ms)           |
 | `active_observer_count` | `u16`              | Number of active observers that contributed to this score |
-| `active_region_count`   | `u16`              | Number of non-stale regions contributing to the score |
-| `last_updated_slot`     | `u64`              | Slot of the last update — check for staleness         |
-| `last_updated_ts`       | `i64`              | Unix timestamp of the last update                     |
-| `min_health_ever`       | `u8`               | Lowest score ever recorded                            |
-| `max_health_ever`       | `u8`               | Highest score ever recorded                           |
-| `total_attestations`    | `u64`              | Cumulative attestation count across all observers     |
-| `region_scores`         | `[RegionScore; 7]` | Per-region breakdown across all supported regions     |
-| `bump`                  | `u8`               | PDA bump seed                                         |
+| `active_region_count`   | `u16`              | Number of non-stale regions contributing to the score     |
+| `last_updated_slot`     | `u64`              | Slot of the last update — check for staleness             |
+| `last_updated_ts`       | `i64`              | Unix timestamp of the last update                         |
+| `min_health_ever`       | `u8`               | Lowest score ever recorded                                |
+| `max_health_ever`       | `u8`               | Highest score ever recorded                               |
+| `total_attestations`    | `u64`              | Cumulative attestation count across all observers         |
+| `region_scores`         | `[RegionScore; 7]` | Per-region breakdown across all supported regions         |
+| `agave_pct`             | `u8`               | Global avg Agave client count across active regions       |
+| `firedancer_pct`        | `u8`               | Global avg Firedancer client count across active regions  |
+| `jito_pct`              | `u8`               | Global avg Jito client count across active regions        |
+| `solana_labs_pct`       | `u8`               | Global avg Solana Labs client count across active regions |
+| `other_pct`             | `u8`               | Global avg other client count across active regions       |
+| `bump`                  | `u8`               | PDA bump seed                                             |
 
 ### `RegionScore` fields
 
-| Field               | Type  | Description                         |
-| ------------------- | ----- | ----------------------------------- |
-| `region`            | `u8`  | Region enum (`Asia`, `US`, `EU`, `SouthAmerica`, `Africa`, `Oceania`, `Other`) |
-| `health_score`      | `u8`  | Score for this region 0–100         |
-| `reachability_pct`  | `u8`  | TPU reachability % from this region |
-| `avg_rtt_us`        | `u32` | Average RTT in microseconds         |
-| `slot_latency_ms`   | `u32` | Slot propagation latency (ms)       |
-| `last_updated_slot` | `u64` | Slot when this region last reported |
+| Field                 | Type  | Description                                                                    |
+| --------------------- | ----- | ------------------------------------------------------------------------------ |
+| `region`              | `u8`  | Region enum (`Asia`, `US`, `EU`, `SouthAmerica`, `Africa`, `Oceania`, `Other`) |
+| `observer_count`      | `u16` | Active observers contributing to this region                                   |
+| `health_score`        | `u8`  | Avg health score 0–100                                                         |
+| `reachability_pct`    | `u8`  | Avg TPU reachability %                                                         |
+| `avg_rtt_us`          | `u32` | Avg RTT in microseconds                                                        |
+| `slot_latency_ms`     | `u32` | Avg slot propagation latency (ms)                                              |
+| `last_updated_slot`   | `u64` | Slot when region last reported                                                 |
+| `agave_count`         | `u16` | Avg Agave validator count seen by observers in this region                     |
+| `firedancer_count`    | `u16` | Avg Firedancer validator count                                                 |
+| `jito_count`          | `u16` | Avg Jito validator count                                                       |
+| `solana_labs_count`   | `u16` | Avg Solana Labs validator count                                                |
+| `other_count`         | `u16` | Avg other client count                                                         |
+| `reachable_stake_pct` | `u8`  | Avg stake-weighted reachability % across observers in region                   |
 
 ---
 
@@ -195,7 +207,7 @@ The program emits the following events for indexing and off-chain monitoring:
 - `ObserverRegistered`: Emitted when an observer successfully registers and escrows stake.
 - `ObserverDeregistered`: Emitted when an observer leaves or is forcibly removed.
 - `ObserverSlashed`: Emitted when an observer's stake is slashed by the authority.
-- `AttestationSubmitted`: Emitted during `submit_attestation` with the observer's measurement, health score, and slot.
+- `AttestationSubmitted`: Emitted during `submit_attestation` with the observer's measurement, health score, slot, client distribution counts, and stake-weighted reachability.
 - `ConfigUpdated`: Emitted when the registry configuration is updated by the authority.
 
 ---
