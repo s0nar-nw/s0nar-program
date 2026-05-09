@@ -162,7 +162,7 @@ pub fn clear_region_aggregate(region_score: &mut RegionScore) {
 }
 
 /// Computes global client distribution percentages across all fresh active regions.
-/// Returns (agave_pct, firedancer_pct, jito_pct, solana_labs_pct, other_pct).
+/// Returns (agave_count, firedancer_count, jito_count, solana_labs_count, other_count).
 pub fn compute_avg_client_diversity(
     health: &NetworkHealthAccount,
     current_slot: u64,

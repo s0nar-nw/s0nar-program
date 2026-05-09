@@ -237,11 +237,11 @@ pub struct NetworkHealthAccount {
     pub region_scores: [RegionScore; 7],
 
     // global client distribution across all active regions
-    pub agave_pct: u8,
-    pub firedancer_pct: u8,
-    pub jito_pct: u8,
-    pub solana_labs_pct: u8,
-    pub other_pct: u8,
+    pub agave_count: u8,
+    pub firedancer_count: u8,
+    pub jito_count: u8,
+    pub solana_labs_count: u8,
+    pub other_count: u8,
 
     /// PDA bump seed
     pub bump: u8,

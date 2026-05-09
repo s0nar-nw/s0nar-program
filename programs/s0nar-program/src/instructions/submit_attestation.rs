@@ -230,11 +230,11 @@ pub fn submit(
     // global client distribution
     let (agave_p, fd_p, jito_p, labs_p, other_p) =
         compute_avg_client_diversity(network_health, clock.slot);
-    network_health.agave_pct = agave_p;
-    network_health.firedancer_pct = fd_p;
-    network_health.jito_pct = jito_p;
-    network_health.solana_labs_pct = labs_p;
-    network_health.other_pct = other_p;
+    network_health.agave_count = agave_p;
+    network_health.firedancer_count = fd_p;
+    network_health.jito_count = jito_p;
+    network_health.solana_labs_count = labs_p;
+    network_health.other_count = other_p;
 
     msg!(
         "Attestation: region={:?} score={} reach={}% stake_reach={}% latency={}ms slot={} clients=agave:{} fd:{} jito:{} labs:{} other:{}",

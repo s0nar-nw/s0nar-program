@@ -1887,11 +1887,11 @@ mod tests {
         .unwrap();
 
         // global avg = (asia_avg + us_avg) / 2
-        assert_eq!(health.agave_pct, (60 + 40) / 2);
-        assert_eq!(health.firedancer_pct, (20 + 40) / 2);
-        assert_eq!(health.jito_pct, (10 + 10) / 2);
-        assert_eq!(health.solana_labs_pct, (5 + 5) / 2);
-        assert_eq!(health.other_pct, (5 + 5) / 2);
+        assert_eq!(health.agave_count, (60 + 40) / 2);
+        assert_eq!(health.firedancer_count, (20 + 40) / 2);
+        assert_eq!(health.jito_count, (10 + 10) / 2);
+        assert_eq!(health.solana_labs_count, (5 + 5) / 2);
+        assert_eq!(health.other_count, (5 + 5) / 2);
 
         // crank should produce same result
         crank_aggregation(&mut svm, &authority, &[obs1.pubkey(), obs2.pubkey()]).unwrap();
@@ -1904,7 +1904,7 @@ mod tests {
                 .as_ref(),
         )
         .unwrap();
-        assert_eq!(health.agave_pct, 50);
-        assert_eq!(health.firedancer_pct, 30);
+        assert_eq!(health.agave_count, 50);
+        assert_eq!(health.firedancer_count, 30);
     }
 }
