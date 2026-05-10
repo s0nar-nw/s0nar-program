@@ -1,3 +1,14 @@
+## s0nar-ecosystem
+
+<p>
+    <a href="https://github.com/s0nar-nw/s0nar-observer">s0nar-observer</a>
+    <a href="https://github.com/s0nar-nw/s0nar-web">s0nar-web</a>
+    <a href="https://github.com/s0nar-nw/s0nar-sdk">s0nar-sdk</a>
+    <a href="https://github.com/s0nar-nw/s0nar-agent">s0nar-agent</a>
+</p>
+
+---
+
 <p align="center">
   <img src="./s0nar.svg" alt="s0nar logo" width="400" />
 </p>
@@ -162,11 +173,11 @@ Total rent depends on observer count and current account sizes.
 | `max_health_ever`       | `u8`               | Highest score ever recorded                               |
 | `total_attestations`    | `u64`              | Cumulative attestation count across all observers         |
 | `region_scores`         | `[RegionScore; 7]` | Per-region breakdown across all supported regions         |
-| `agave_count`             | `u8`               | Global avg Agave client count across active regions       |
-| `firedancer_count`        | `u8`               | Global avg Firedancer client count across active regions  |
-| `jito_count`              | `u8`               | Global avg Jito client count across active regions        |
-| `solana_labs_count`       | `u8`               | Global avg Solana Labs client count across active regions |
-| `other_count`             | `u8`               | Global avg other client count across active regions       |
+| `agave_count`           | `u8`               | Global avg Agave client count across active regions       |
+| `firedancer_count`      | `u8`               | Global avg Firedancer client count across active regions  |
+| `jito_count`            | `u8`               | Global avg Jito client count across active regions        |
+| `solana_labs_count`     | `u8`               | Global avg Solana Labs client count across active regions |
+| `other_count`           | `u8`               | Global avg other client count across active regions       |
 | `bump`                  | `u8`               | PDA bump seed                                             |
 
 ### `RegionScore` fields
